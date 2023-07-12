@@ -20,10 +20,6 @@ let ROUTE_CONFIG = {
     "/uitest/widgetService/getAllWidgets": {
         "query": [],
         "body": []
-    },
-    "/uitest/sceneDataService/getAllData": {
-        "query": [],
-        "body": []
     }
 }
 

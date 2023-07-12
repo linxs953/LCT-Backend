@@ -115,9 +115,25 @@ export class TaskController {
         const runResultDetail = status_['run_result'] == "{}" ? null:JSON.parse(status_['run_result'])
         let taskRunSceneInfoList = []
         let allSceneData = []
-        // 统计有多少个场景
-        Object.keys(errorDetail).map(scene => {
-            const allCaseNumOfScene = getSceneCaseNum(errorDetail,scene)
+        
+        /* 
+            统计有多少个场景
+        */
+
+        // 拿到场景名称列表
+        let sceneNameList:any
+        if (Object.keys(errorDetail).length > Object.keys(runResultDetail).length) {
+            sceneNameList = Object.keys(errorDetail)
+        } else {
+            sceneNameList = Object.keys(runResultDetail)
+        }
+
+
+        for (let scene of sceneNameList) {
+            let allCaseNumOfScene = getSceneCaseNum(errorDetail,scene)
+
+            // 如果执行成功，拿runResultDetail
+            allCaseNumOfScene = allCaseNumOfScene?allCaseNumOfScene:getSceneCaseNum(runResultDetail,scene)
             const sceneFailedNum = getErrorNum(errorDetail, scene)
             const sceneSuccessNum = allCaseNumOfScene - sceneFailedNum
             taskRunSceneInfoList.push({
@@ -128,22 +144,24 @@ export class TaskController {
                 runStatus: sceneFailedNum > 0?false:true
             })
 
-            // 遍历场景中的用例，拿到结果运行结果和出错信息并返回
-            Object.keys(errorDetail[scene]).map(caseName => {
-                const runStatus = (errorDetail[scene] && errorDetail[scene][caseName] && 
-                                    Object.keys(errorDetail[scene][caseName]).toString() == "")
-                                    ?true:false
+            // 拿到场景的用例名称列表
+            let caseList:any
+            if (Object.keys(errorDetail[scene]).length > Object.keys(runResultDetail[scene]).length) {
+                caseList = Object.keys(errorDetail[scene])
+            } else {
+                caseList = Object.keys(runResultDetail[scene])
+            }
+
+            for (let caseName of caseList) {
                 const stage =  (errorDetail[scene][caseName]&&Object.keys(errorDetail[scene][caseName]).length>0)?
                                     Object.keys(errorDetail[scene][caseName]).toString():
                                     "success"
                 let errorInfo = (errorDetail[scene][caseName]&&errorDetail[scene][caseName])?
-                                        errorDetail[scene][caseName][stage]:
-                                        null
+                                    errorDetail[scene][caseName][stage]:
+                                    null
                 const resultInfo =  (runResultDetail[scene][caseName]&&runResultDetail[scene][caseName])?
-                                        runResultDetail[scene][caseName]:
-                                        null
-                
-                // 根据用例执行的状态拿到对应的结果
+                                    runResultDetail[scene][caseName]:
+                                    null
                 if (errorInfo) {
                     switch(typeof(errorInfo['resp'])) {
                         // 结果是字符串，可能出现在预处理阶段
@@ -165,6 +183,9 @@ export class TaskController {
                 } else {
                     errorInfo = null
                 }
+                
+                // 根据errorInfo设置执行状态
+                const runStatus = errorInfo?false:true
 
                 // 组装场景运行结果taskRunList
                 const stepResult =  {
@@ -179,9 +200,9 @@ export class TaskController {
                                 resultInfo['error']['result']:resultInfo)
                 }
                 allSceneData.push(stepResult)
-            })
-        })
-        
+            }
+            
+        }
         const res:ApiRunVO = {
             success: true,
             message: "fetch task run record successfully",
