@@ -19,3 +19,12 @@ export interface UpdateTaskDto {
         auto_run_enable: number
     }
 }
+
+
+// 创建关联任务的参数
+export interface TaskRelationDto {
+    taskId:string
+    taskType: string
+    moduleIdList?: Array<string>
+    sceneIdList?: Array<string>
+}

@@ -6,7 +6,7 @@ import { FeatMKService } from "../featMK/featMK.service";
 // import { getErrorNum, getSceneCaseNum } from "./utils/case_statics";
 import {CaseStatics} from "./task.utils"
 import {ApiRunVO, CreateTaskVO, DeleteTaskVO, StartTaskVO, UpdateTaskVO} from "./task.vo"
-import { TaskInfoDto, UpdateTaskDto } from "./task.dto";
+import { TaskInfoDto, TaskRelationDto, UpdateTaskDto } from "./task.dto";
 import { Prisma } from "@prisma/client";
 const random = require("string-random")
 var sd = require('silly-datetime');
@@ -54,7 +54,7 @@ export class TaskController {
         }
     }
 
-    @Get(`${APITEST_CONFIG.routePrefix}/getResult`)
+    @Get(`getResult`)
     async getApiRunResult(@Query() query) {
         const detailId = query.runId
         this.taskLogger.debug(`find API_RUN_RESULT by [runId=${detailId}]`)
@@ -175,7 +175,7 @@ export class TaskController {
         return res
     }
 
-    @Post(`${APITEST_CONFIG.routePrefix}/start`)
+    @Post(`start`)
     async start(@Query() query, @Res() _res) {
         this.taskLogger.debug(`process start task with [taskId=${query.taskId}]`)
         try {
@@ -208,7 +208,7 @@ export class TaskController {
     }
     
 
-    @Post(`${APITEST_CONFIG.routePrefix}/newTask`)
+    @Post(`newTask`)
     async createTask(@Res() _res, @Body() taskDto:TaskInfoDto) {
         const taskInfo:Prisma.at_task_infoCreateInput = {
             task_id: `TASK${random(10)}`,
@@ -246,7 +246,7 @@ export class TaskController {
         
     }
 
-    @Post(`${APITEST_CONFIG.routePrefix}/updateTask`)
+    @Post(`updateTask`)
     async updateTask(@Body() updateTaskDto:UpdateTaskDto, @Res() _res) {
         try {
             const res = await this.taskService.updateTaskInfo(updateTaskDto.condition, updateTaskDto.data)
@@ -268,10 +268,20 @@ export class TaskController {
         }
     }
 
-    @Delete(`${APITEST_CONFIG.routePrefix}/deleteTask`)
-    async deleteTask(task_id:string, @Res() _res) {
+    @Delete(`deleteTask`)
+    async deleteTask(@Query() query, @Res() _res) {
+        const taskId = query.taskId
+        if (!taskId) {
+            const deleteTaskVO:DeleteTaskVO = {
+                status: 0,
+                isSuccess: false,
+                errMsg: "task id is invalid"
+            }
+            _res.status(HttpStatus.BAD_REQUEST).send(deleteTaskVO)
+            return 
+        }
         try {
-            await this.taskService.deleteTaskInfo(task_id)
+            await this.taskService.deleteTaskInfo(taskId)
             const deleteTaskVO:DeleteTaskVO = {
                 status: 0,
                 isSuccess: true,
@@ -288,6 +298,150 @@ export class TaskController {
             _res.status(HttpStatus.OK).send(deleteTaskVO)
             return
         }        
+    }
+
+
+    @Post(`createRelation`)
+    async relateTaskWithModule(@Body() taskRelation:TaskRelationDto, @Res() _res) {
+        let dataList = []
+        if (taskRelation.moduleIdList && taskRelation.sceneIdList) {
+            // 不能同时指定模块和场景
+            this.taskLogger.error("no support assign module_id and scene_id at the same time","")
+            _res.status(HttpStatus.BAD_REQUEST).send({
+                status: HttpStatus.BAD_REQUEST,
+                errMsg: "assign module_id and scene_id at the same time",
+                data: null,
+                isSuccess: false
+            })
+            return
+        }
+        
+        if (taskRelation.moduleIdList && taskRelation.moduleIdList.length === 0 && !taskRelation.sceneIdList) {
+            _res.status(HttpStatus.OK).send({
+                status: HttpStatus.INTERNAL_SERVER_ERROR,
+                errMsg: "module id list no data",
+                isSuccess: false,
+                taskType: taskRelation.taskType
+            })
+            return
+        }
+
+        if (taskRelation.sceneIdList && !taskRelation.moduleIdList && taskRelation.sceneIdList.length === 0) {
+            _res.status(HttpStatus.OK).send({
+                status: HttpStatus.INTERNAL_SERVER_ERROR,
+                errMsg: "scene id list no data",
+                isSuccess: false,
+                taskType: taskRelation.taskType
+            })
+            return
+        }
+
+        // 设置遍历的数组
+        if (taskRelation.taskType === "1" ) {
+            dataList = taskRelation.moduleIdList
+        } else {
+            dataList = taskRelation.sceneIdList
+        }
+
+        for (let Id of dataList) {
+            try {
+                let taskRelationCreateInput:Prisma.at_task_model_relationCreateInput = {
+                    id: `RELATE${random(10)}`,
+                    task_id: taskRelation.taskId,
+                    task_type: "1",
+                    module_id: "",
+                    scene_id: "",
+                    create_person: "admin",
+                    create_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm'),
+                    modify_person: "admin",
+                    modify_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm')
+                }
+
+                // 根据任务类型，设置relation的moduleid 或者 sceneid
+                if (taskRelation.taskType === "1") {
+                    taskRelationCreateInput['module_id'] = Id
+                } else {
+                    taskRelationCreateInput['scene_id'] = Id
+                }
+                await this.taskService.createTaskRelation(taskRelationCreateInput)
+            } catch(err) {
+                this.taskLogger.error(`create task relation failed for error ${err.message}\n, start delete task relation with taskId: ${taskRelation.taskId}`,"")
+                try {
+                    // 创建relation失败，删除taskId关联的所有relation
+                    await this.taskService.removeTaskRelation(taskRelation.taskId)
+                    this.taskLogger.log(`remove task relation with taskId: ${taskRelation.taskId} successfully`)
+                    _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                        status: HttpStatus.INTERNAL_SERVER_ERROR,
+                        errMsg: err.message,
+                        isSuccess: false,
+                        taskType: taskRelation.taskType,
+                        data: null
+                    })
+                    return
+                } catch(removeErr) {
+                    // 删除relation失败
+                   this.taskLogger.error(`remove task relation with taskId: ${taskRelation.taskId} failed for ${removeErr.message}`)
+                   _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                        status: HttpStatus.INTERNAL_SERVER_ERROR,
+                        errMsg: removeErr.message,
+                        isSuccess: false,
+                        taskType: taskRelation.taskType,
+                        data: null
+                    })
+                   return 
+                }
+            }
+        }
+        // 创建relation成功
+        _res.status(HttpStatus.OK).send({
+            status: HttpStatus.OK,
+            message: "create task relation successfully",
+            isSuccess: true,
+            taskType: taskRelation.taskType
+        })
+        return 
+    }
+
+
+    @Post("updateRelation")
+    async updateTaskRelation(@Body() updateRelationDto, @Res() _res) {
+        // todo
+    }
+
+    @Delete("deleteRelation")
+    async deleteTaskRelation(@Query() query, @Res() _res) {
+        const taskId = query.taskId
+        if (!taskId) {
+            _res.status(HttpStatus.BAD_REQUEST).send({
+                status: HttpStatus.BAD_REQUEST,
+                errMsg: "taskId is invalid",
+                isSuccess: false
+            })
+            return
+        }
+        try {
+            await this.taskService.removeTaskRelation(taskId)
+            _res.status(HttpStatus.OK).send({
+                status: HttpStatus.OK,
+                message: "delete relation successfully",
+                isSuccess: true
+            })
+            return
+        } catch(err) {
+            this.taskLogger.error(`remove task relation with taskId: ${taskId} failed for ${err.message}`)
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                status: HttpStatus.INTERNAL_SERVER_ERROR,
+                errMsg: `delete relation failed for ${err.message}`,
+                isSuccess: true
+            })
+            return
+        }
+    }
+
+    @Get("getRelation")
+    async getTaskRelations (@Query() query, @Res() _res) {
+        // todo
+        return
     }
 
 } 

@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client"
 
 
 /* 
@@ -79,3 +80,5 @@ export class SceneDataTrans {
         return result
     }
 }
+
+

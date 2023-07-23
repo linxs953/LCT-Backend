@@ -25,29 +25,6 @@ export class TaskService {
 
 
     /*
-        根据taskid获取任务信息
-    */
-    // async findTask(taskId:String) {
-    //     return this.pgService.at_task_model_relation.findFirst({
-    //         where: {
-    //             task_id: taskId.toString()
-    //         }
-    //     })
-    // }
-
-    /*
-        根据taskid获取任务信息
-    */
-    // async findTaskInfo(taskId:String) {
-    //     return this.pgService.at_task_info.findFirst({
-    //         where: {
-    //             task_id: taskId.toString()
-    //         }
-    //     })
-    // }
-
-
-    /*
         根据taskid获取任务信息，对findTask方法的封装
     */
     async findTaskRelationByTaskId(taskId:string) {
@@ -334,14 +311,6 @@ export class TaskService {
     }
 
 
-    async removeTaskRelation(task_id:string) {
-        return this.pgService.at_task_model_relation.delete({
-            where: {
-                task_id: task_id
-            }
-        })
-    }
-
     async createTaskRelation(relation:Prisma.at_task_model_relationCreateInput) {
         const task_id = relation.task_id
         const module_id = relation.module_id
@@ -363,7 +332,7 @@ export class TaskService {
     }
 
     async createTaskRelations(taskId:string, moduleList: Array<string>) {
-        
+        // todo
     }
 
     async updateTaskRelation(condition:Prisma.at_task_model_relationWhereUniqueInput, data:Prisma.at_task_model_relationUpdateInput) {
@@ -373,6 +342,25 @@ export class TaskService {
                 scene_id: condition.scene_id
             },
             data: data
+        })
+    }
+
+    async removeTaskRelation(task_id:string) {
+        return this.pgService.at_task_model_relation.delete({
+            where: {
+                task_id: task_id
+            }
+        })
+    }
+
+    async findRelation(task_id?: string) {
+        if (!task_id) {
+            return this.pgService.at_task_model_relation.findMany()
+        }
+        return this.pgService.at_task_model_relation.findFirst({
+            where: {
+                task_id: task_id
+            }
         })
     }
 }
