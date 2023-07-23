@@ -5,10 +5,8 @@ import { ExecutorService } from "../executor/executor.service";
 import { FeatMKService } from "../featMK/featMK.service";
 import { SceneService } from "../scene/scene.service";
 import { TaskRunResultService } from "./task.report.service";
-import { sceneInfo2Dto } from "./utils/parse";
-import { getErrorNum } from "./utils/case_statics";
 import { Prisma } from "@prisma/client";
-import { TaskInfoDto } from "./task.dto";
+import { CaseStatics, SceneDataTrans } from "./task.utils";
 const random = require("string-random")
 var sd = require('silly-datetime');
 
@@ -122,7 +120,7 @@ export class TaskService {
             for (let scene of Object.keys(taskMeta[module])) {
                 const dispatchDto:CollectionRunDto = {
                     name: scene,
-                    data: sceneInfo2Dto(taskMeta[module][scene])
+                    data: SceneDataTrans.sceneInfo2Dto(taskMeta[module][scene])
                 }
 
                 // 封装成promise
@@ -142,7 +140,7 @@ export class TaskService {
                         this.taskServiceLogger.log(`task run result: \n${JSON.stringify(taskRunRes)}`)
     
                         // 统计执行成功和执行失败数量
-                        const caseExecFailedCount = getErrorNum(taskRunRes.error)
+                        const caseExecFailedCount = CaseStatics.getErrorNum(taskRunRes.error)
                         const caseExecSuccessCount = allCaseCount - caseExecFailedCount
 
                         // 拿执行结果更新record

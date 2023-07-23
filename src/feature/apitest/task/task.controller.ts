@@ -3,7 +3,8 @@ import {TaskService } from "./task.service";
 import { APITEST_CONFIG } from "../apitest.config";
 import { Body, Delete, Res } from "@nestjs/common/decorators";
 import { FeatMKService } from "../featMK/featMK.service";
-import { getErrorNum, getSceneCaseNum } from "./utils/case_statics";
+// import { getErrorNum, getSceneCaseNum } from "./utils/case_statics";
+import {CaseStatics} from "./task.utils"
 import {ApiRunVO, CreateTaskVO, DeleteTaskVO, StartTaskVO, UpdateTaskVO} from "./task.vo"
 import { TaskInfoDto, UpdateTaskDto } from "./task.dto";
 import { Prisma } from "@prisma/client";
@@ -82,10 +83,10 @@ export class TaskController {
         }
 
         for (let scene of sceneNameList) {
-            let allCaseNumOfScene = getSceneCaseNum(errorDetail,scene)
+            let allCaseNumOfScene = CaseStatics.getSceneCaseNum(errorDetail,scene)
             // 如果执行成功，拿runResultDetail
-            allCaseNumOfScene = allCaseNumOfScene?allCaseNumOfScene:getSceneCaseNum(runResultDetail,scene)
-            const sceneFailedNum = getErrorNum(errorDetail, scene)
+            allCaseNumOfScene = allCaseNumOfScene?allCaseNumOfScene:CaseStatics.getSceneCaseNum(runResultDetail,scene)
+            const sceneFailedNum = CaseStatics.getErrorNum(errorDetail, scene)
             const sceneSuccessNum = allCaseNumOfScene - sceneFailedNum
             taskRunSceneInfoList.push({
                 sceneName: scene,
