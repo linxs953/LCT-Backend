@@ -1,6 +1,33 @@
+// 创建任务的返回值结构
+ export interface CreateTaskVO {
+    status: number
+    isSuccess: boolean
+    message?: string
+    errMsg?: string
+    data: {
+        task_id: string
+    }
+}
+
+// 更新任务的返回值结构
+export interface UpdateTaskVO {
+    status: number
+    isSuccess: boolean
+    message?: string
+    errMsg?: string
+}
+
+// 删除任务的返回值结构
+export interface DeleteTaskVO  {
+    status: number
+    isSuccess: boolean
+    message?: string
+    errMsg?: string
+}
 
 
-export class StartTaskVO {
+// 任务运行接口的返回值结构
+export interface StartTaskVO {
     status: number
     isSuccess:boolean
     logId?: string
@@ -10,7 +37,7 @@ export class StartTaskVO {
 }
 
 
-class TaskRunSceneDetail {
+interface TaskRunSceneDetail {
     sceneName: string
     stepName: string
     runStatus: boolean
@@ -19,7 +46,7 @@ class TaskRunSceneDetail {
     result: {}
 }
 
-class TaskRunSceneInfo {
+interface TaskRunSceneInfo {
     sceneName: string
     execSuccessNum: number
     execFailNum: number
@@ -27,7 +54,7 @@ class TaskRunSceneInfo {
     runStatus: boolean
 }
 
-class TaskRunInfo {
+interface TaskRunInfo {
     taskRunId: string
     taskStatus: number
     taskRunName: string
@@ -38,7 +65,9 @@ class TaskRunInfo {
     createTime: string | Date
 }
 
-export class ApiRunVO {
+
+// 获取任务执行结果接口的返回值结构
+export interface ApiRunVO {
     success: boolean
     message: string
     data: {

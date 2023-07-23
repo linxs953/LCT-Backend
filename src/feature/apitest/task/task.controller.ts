@@ -1,11 +1,15 @@
 import { Controller, Get, HttpStatus, Logger, Post, Query } from "@nestjs/common";
 import {TaskService } from "./task.service";
 import { APITEST_CONFIG } from "../apitest.config";
-import { Res } from "@nestjs/common/decorators";
+import { Body, Delete, Res } from "@nestjs/common/decorators";
 import { FeatMKService } from "../featMK/featMK.service";
 import { getErrorNum, getSceneCaseNum } from "./utils/case_statics";
-import {ApiRunVO, StartTaskVO} from "./task.vo"
+import {ApiRunVO, CreateTaskVO, DeleteTaskVO, StartTaskVO, UpdateTaskVO} from "./task.vo"
+import { TaskInfoDto, UpdateTaskDto } from "./task.dto";
+import { Prisma } from "@prisma/client";
 const random = require("string-random")
+var sd = require('silly-datetime');
+
 
 @Controller(`${APITEST_CONFIG.routePrefix}/taskService`)
 export class TaskController {
@@ -16,53 +20,6 @@ export class TaskController {
     ) {
         this.taskLogger = new Logger(TaskController.name)
     }
-
-    // @Post("add")
-    // async configApiTask(@Body() body:TaskDto, @Res() _resp) {
-    //     this.taskLogger.debug(`config api task , recevive param \n${JSON.stringify(body)}`)
-    //     const checkRs = check(body)
-    //     if (checkRs) {
-    //         this.taskLogger.error(`taskDto verify failed.data:\n${JSON.stringify(body)}`)
-    //         _resp.status(HttpStatus.BAD_REQUEST).send({
-    //             status: HttpStatus.BAD_REQUEST,
-    //             error: checkRs.message,
-    //             isSuccess:false,
-    //             data: null
-    //         })
-    //         return
-    //     }
-    //     var taskBody:Prisma.task_infoCreateInput = {
-    //         task_id: "DSTASK" + random(10),
-    //         task_name: String(body.taskName),
-    //         run_env: body.environment.toString()?body.environment.toString():"test",
-    //         is_enable: body.enable,
-    //         auot_run_enable: body.autoRun,
-    //         create_time: new Date(),
-    //         modify_time: new Date(),
-    //         create_person: "default",
-    //         modify_person: "default"
-    //     }
-    //     this.taskService.createNewTask(taskBody).then(res => {
-    //         this.taskLogger.debug("task create complete!")
-    //         _resp.status(HttpStatus.OK).send({
-    //             status: HttpStatus.OK,
-    //             isSuccess: true,
-    //             error: null,
-    //             data: res
-    //         })
-    //         return
-            
-    //     }).catch(err => {
-    //         this.taskLogger.error(`create task occur err. errMsg:\n${err.message}`)
-    //         _resp.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-    //             status: HttpStatus.INTERNAL_SERVER_ERROR,
-    //             error: err.message,
-    //             isSuccess: false,
-    //             data:null
-    //         })
-    //         return
-    //     })
-    // }
 
     @Get("getAllScene")
     async getAllScene(@Query() reqParam, @Res() _res) {
@@ -115,12 +72,8 @@ export class TaskController {
         const runResultDetail = status_['run_result'] == "{}" ? null:JSON.parse(status_['run_result'])
         let taskRunSceneInfoList = []
         let allSceneData = []
-        
-        /* 
-            统计有多少个场景
-        */
+        // 统计有多少个场景
 
-        // 拿到场景名称列表
         let sceneNameList:any
         if (Object.keys(errorDetail).length > Object.keys(runResultDetail).length) {
             sceneNameList = Object.keys(errorDetail)
@@ -128,10 +81,8 @@ export class TaskController {
             sceneNameList = Object.keys(runResultDetail)
         }
 
-
         for (let scene of sceneNameList) {
             let allCaseNumOfScene = getSceneCaseNum(errorDetail,scene)
-
             // 如果执行成功，拿runResultDetail
             allCaseNumOfScene = allCaseNumOfScene?allCaseNumOfScene:getSceneCaseNum(runResultDetail,scene)
             const sceneFailedNum = getErrorNum(errorDetail, scene)
@@ -144,7 +95,6 @@ export class TaskController {
                 runStatus: sceneFailedNum > 0?false:true
             })
 
-            // 拿到场景的用例名称列表
             let caseList:any
             if (Object.keys(errorDetail[scene]).length > Object.keys(runResultDetail[scene]).length) {
                 caseList = Object.keys(errorDetail[scene])
@@ -183,8 +133,7 @@ export class TaskController {
                 } else {
                     errorInfo = null
                 }
-                
-                // 根据errorInfo设置执行状态
+
                 const runStatus = errorInfo?false:true
 
                 // 组装场景运行结果taskRunList
@@ -203,6 +152,7 @@ export class TaskController {
             }
             
         }
+        
         const res:ApiRunVO = {
             success: true,
             message: "fetch task run record successfully",
@@ -230,8 +180,12 @@ export class TaskController {
         try {
             const logId = String("DTL" + random(10)).toUpperCase()
             let taskInfo = await this.taskService.findTaskInfoByTaskId(query.taskId)
-            let taskRelation = await this.taskService.findTask(query.taskId)
-            this.taskService.runTask(query.taskId,logId,taskRelation,taskInfo)
+            let taskRelation = await this.taskService.findTaskRelationByTaskId(query.taskId)
+            const taskPromiseList = await this.taskService.runTask(query.taskId,logId,taskRelation,taskInfo)
+            Promise.all(taskPromiseList).catch(err => {
+                this.taskLogger.error("run promise scene error","")
+                this.taskLogger.error(JSON.stringify(err),"")
+            })
             const tresp:StartTaskVO = {
                 status: HttpStatus.OK,
                 isSuccess: true,
@@ -251,4 +205,88 @@ export class TaskController {
             return
         }
     }
+    
+
+    @Post("newTask")
+    async createTask(@Res() _res, @Body() taskDto:TaskInfoDto) {
+        const taskInfo:Prisma.at_task_infoCreateInput = {
+            task_id: `TASK${random(10)}`,
+            task_name: taskDto.task_name,
+            run_env: taskDto.run_env,
+            is_enable: taskDto.is_enable,
+            auto_run_enable: taskDto.auto_run_enable,
+            create_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm'),
+            modify_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm'),
+            create_person: "admin",
+            modify_person: "admin"
+        }
+        try {
+            const res  = await this.taskService.createTaskInfo(taskInfo)
+            const createTaskVO:CreateTaskVO = {
+                status: 0,
+                isSuccess: true,
+                message: "create task successfully",
+                data: {
+                    task_id: res.task_id
+                }
+            }
+            _res.status(HttpStatus.OK).send(createTaskVO)
+            return
+        } catch(err) {
+            const createTaskVO:CreateTaskVO = {
+                status: 500,
+                isSuccess: false,
+                errMsg: err.message,
+                data: null
+            }
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(createTaskVO)
+            return
+        }
+        
+    }
+
+    @Post("updateTask")
+    async updateTask(@Body() updateTaskDto:UpdateTaskDto, @Res() _res) {
+        try {
+            const res = await this.taskService.updateTaskInfo(updateTaskDto.condition, updateTaskDto.data)
+            const updateTaskVO:UpdateTaskVO = {
+                status: 0,
+                isSuccess: true,
+                message: "update task info succesfully"
+            }
+            _res.status(HttpStatus.OK).send(updateTaskVO)
+            return
+        } catch(err) {
+            const updateTaskVO:UpdateTaskVO = {
+                status: 500,
+                isSuccess: false,
+                message: err.message
+            }
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(updateTaskVO)
+            return
+        }
+    }
+
+    @Delete("deleteTask")
+    async deleteTask(task_id:string, @Res() _res) {
+        try {
+            await this.taskService.deleteTaskInfo(task_id)
+            const deleteTaskVO:DeleteTaskVO = {
+                status: 0,
+                isSuccess: true,
+                message: "delete task successfully"
+            }
+            _res.status(HttpStatus.OK).send(deleteTaskVO)
+            return
+        } catch(err) {
+            const deleteTaskVO:DeleteTaskVO = {
+                status: 500,
+                isSuccess: false,
+                errMsg: err.message
+            }
+            _res.status(HttpStatus.OK).send(deleteTaskVO)
+            return
+        }        
+    }
+
 } 
