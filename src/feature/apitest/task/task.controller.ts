@@ -54,7 +54,7 @@ export class TaskController {
         }
     }
 
-    @Get("getResult")
+    @Get(`${APITEST_CONFIG.routePrefix}/getResult`)
     async getApiRunResult(@Query() query) {
         const detailId = query.runId
         this.taskLogger.debug(`find API_RUN_RESULT by [runId=${detailId}]`)
@@ -175,7 +175,7 @@ export class TaskController {
         return res
     }
 
-    @Post("start")
+    @Post(`${APITEST_CONFIG.routePrefix}/start`)
     async start(@Query() query, @Res() _res) {
         this.taskLogger.debug(`process start task with [taskId=${query.taskId}]`)
         try {
@@ -208,7 +208,7 @@ export class TaskController {
     }
     
 
-    @Post("newTask")
+    @Post(`${APITEST_CONFIG.routePrefix}/newTask`)
     async createTask(@Res() _res, @Body() taskDto:TaskInfoDto) {
         const taskInfo:Prisma.at_task_infoCreateInput = {
             task_id: `TASK${random(10)}`,
@@ -246,7 +246,7 @@ export class TaskController {
         
     }
 
-    @Post("updateTask")
+    @Post(`${APITEST_CONFIG.routePrefix}/updateTask`)
     async updateTask(@Body() updateTaskDto:UpdateTaskDto, @Res() _res) {
         try {
             const res = await this.taskService.updateTaskInfo(updateTaskDto.condition, updateTaskDto.data)
@@ -268,7 +268,7 @@ export class TaskController {
         }
     }
 
-    @Delete("deleteTask")
+    @Delete(`${APITEST_CONFIG.routePrefix}/deleteTask`)
     async deleteTask(task_id:string, @Res() _res) {
         try {
             await this.taskService.deleteTaskInfo(task_id)
