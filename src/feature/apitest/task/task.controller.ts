@@ -5,9 +5,10 @@ import { Body, Delete, Res } from "@nestjs/common/decorators";
 import { FeatMKService } from "../featMK/featMK.service";
 // import { getErrorNum, getSceneCaseNum } from "./utils/case_statics";
 import {CaseStatics} from "./task.utils"
-import {ApiRunVO, CreateTaskVO, DeleteTaskVO, StartTaskVO, UpdateTaskVO} from "./task.vo"
-import { TaskInfoDto, TaskRelationDto, UpdateTaskDto } from "./task.dto";
+import {ApiRunVO, CreateTaskVO, DeleteTaskVO, FindAllSceneOfTaskVO, FindTaskRelationVO, StartTaskVO, TaskRelationRecord, UpdateTaskRelationVO, UpdateTaskVO} from "./task.vo"
+import { TaskInfoDto, TaskRelationDto, TaskRelationUpdataDto, UpdateTaskDto } from "./task.dto";
 import { Prisma } from "@prisma/client";
+import { SceneService } from "../scene/scene.service";
 const random = require("string-random")
 var sd = require('silly-datetime');
 
@@ -17,7 +18,8 @@ export class TaskController {
     private readonly taskLogger:Logger
     constructor (
         private readonly taskService:TaskService,
-        private readonly mkService:FeatMKService
+        private readonly mkService:FeatMKService,
+        private readonly sceneService:SceneService
     ) {
         this.taskLogger = new Logger(TaskController.name)
     }
@@ -26,30 +28,40 @@ export class TaskController {
     async getAllScene(@Query() reqParam, @Res() _res) {
         const taskId = reqParam.taskId
         this.taskLogger.debug(`start get allScene with [taskId=${taskId}]`)
+        let getAllSceneVO:FindAllSceneOfTaskVO = {
+            status: 0,
+            isSuccess: true,
+            message: "",
+            data: {}
+        }
         try {
-            this.taskService.findMany(taskId).then(res => {
-                this.taskLogger.debug(`get scene data.\nsceneData: ${JSON.stringify(res)}`)
-                _res.status(HttpStatus.OK).send({
-                    status: HttpStatus.OK,
-                    isSuccess: true,
-                    data: res
-                })
-                return
-            }).catch(err => {
-                this.taskLogger.error(err.stack,"")
-                _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-                    status: HttpStatus.INTERNAL_SERVER_ERROR,
-                    isSuccess: false,
-                    error: err.message
-                })
-                return
-            })
+            const res = await this.taskService.findMany(taskId)
+            getAllSceneVO['data'] = res
+            getAllSceneVO['message'] = `get all scene with [taskId=${taskId}] successfully`
+            _res.status(HttpStatus.OK).send(getAllSceneVO)
+            return
+            // this.taskService.findMany(taskId).then(res => {
+            //     this.taskLogger.debug(`get scene data.\nsceneData: ${JSON.stringify(res)}`)
+            //     _res.status(HttpStatus.OK).send({
+            //         status: HttpStatus.OK,
+            //         isSuccess: true,
+            //         data: res
+            //     })
+            //     return
+            // }).catch(err => {
+            //     this.taskLogger.error(err.stack,"")
+            //     _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+            //         status: HttpStatus.INTERNAL_SERVER_ERROR,
+            //         isSuccess: false,
+            //         error: err.message
+            //     })
+            //     return
+            // })
         } catch(err) {
             this.taskLogger.error(err,"")
-            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-                error: "get task case error"
-            })
+            getAllSceneVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            getAllSceneVO['errMsg'] = "get task case error"
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(getAllSceneVO)
             return
         }
     }
@@ -57,15 +69,16 @@ export class TaskController {
     @Get(`getResult`)
     async getApiRunResult(@Query() query) {
         const detailId = query.runId
-        this.taskLogger.debug(`find API_RUN_RESULT by [runId=${detailId}]`)
+        const sceneId = query.sceneId
+        this.taskLogger.debug(`find API_RUN_RESULT by [runId=${detailId}, sceneId=${sceneId}]`)
         const status_ = await this.taskService.getStatus(detailId)
-        // this.taskLogger.error(status_,"")
         if (!status_) {
             this.taskLogger.error(`find API_RUN_RESULT null with [runId=${detailId}]`,"")
             const _:ApiRunVO = {
-                success: false,
+                isSuccess: false,
                 message: `not found API_RUN_RESULT with [runId=${detailId}]`,
-                data: null
+                data: null,
+                status: 0
             }
             return _
         }
@@ -87,7 +100,7 @@ export class TaskController {
             // 如果执行成功，拿runResultDetail
             allCaseNumOfScene = allCaseNumOfScene?allCaseNumOfScene:CaseStatics.getSceneCaseNum(runResultDetail,scene)
             const sceneFailedNum = CaseStatics.getErrorNum(errorDetail, scene)
-            const sceneSuccessNum = allCaseNumOfScene - sceneFailedNum
+            const sceneSuccessNum = allCaseNumOfScene - sceneFailedNum            
             taskRunSceneInfoList.push({
                 sceneName: scene,
                 execSuccessNum: sceneSuccessNum,
@@ -155,12 +168,13 @@ export class TaskController {
         }
         
         const res:ApiRunVO = {
-            success: true,
+            isSuccess: true,
             message: "fetch task run record successfully",
             data: {
                 taskRunList: allSceneData,
                 taskRunSceneList: taskRunSceneInfoList,
                 taskRunInfo: {
+                    taskId: status_.task_id,
                     taskRunId: detailId,
                     taskStatus: status_['status'],
                     taskRunName: status_['task_run_name'],
@@ -171,6 +185,7 @@ export class TaskController {
                     createTime: status_['create_time']
                 },
             },
+            status: 0
         }
         return res
     }
@@ -403,9 +418,85 @@ export class TaskController {
     }
 
 
+    // todo: 考虑后面把for循环调用service移到service内部处理
     @Post("updateRelation")
-    async updateTaskRelation(@Body() updateRelationDto, @Res() _res) {
-        // todo
+    async updateTaskRelation(@Body() updateRelationDto:TaskRelationUpdataDto, @Res() _res) {
+        switch(updateRelationDto.taskType) {
+            case "1": {
+                if ((!updateRelationDto.moduleIdList || updateRelationDto.moduleIdList.length === 0)){
+                    const updateVO:UpdateTaskRelationVO = {
+                        status: HttpStatus.BAD_REQUEST,
+                        isSuccess: false,
+                        errMsg: "taskType=1 and moduleIdList invalid"
+                    }
+                    _res.status(HttpStatus.BAD_REQUEST).send(updateVO)
+                    return
+                }
+                break
+            }
+            case "2": {
+                if (!updateRelationDto.sceneIdList || updateRelationDto.sceneIdList.length === 0) {
+                    const updateVO:UpdateTaskRelationVO = {
+                        status: HttpStatus.BAD_REQUEST,
+                        isSuccess: false,
+                        errMsg: "taskType=2 and sceneIdList invalid"
+                    }
+                    _res.status(HttpStatus.BAD_REQUEST).send(updateVO)
+                    return 
+                }
+                break
+            }
+            default: {
+                const updateVO = {
+                    status: HttpStatus.BAD_REQUEST,
+                    isSuccess: false,
+                    errMsg: "unsupported taskType"
+                }
+                _res.status(HttpStatus.BAD_REQUEST).send(updateVO)
+                return
+            }
+        }
+
+
+        let idList = updateRelationDto.taskType === "1"?updateRelationDto.moduleIdList:updateRelationDto.sceneIdList
+
+        try {
+            for (let idStr of idList) {
+                const conditon:Prisma.at_task_model_relationWhereUniqueInput = {
+                    task_id: updateRelationDto.taskId,
+                    id: updateRelationDto.relationId
+                }
+                
+                let data:Prisma.at_task_model_relationUpdateInput = {
+                    task_type: updateRelationDto.taskType,
+                    modify_person: "admin",
+                    modify_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm')
+                }
+                if (updateRelationDto.taskType === "1") {
+                    data['module_id'] = idStr
+                } else {
+                    data['scene_id'] = idStr
+                }
+                await this.taskService.updateTaskRelation(conditon, data)    
+            }
+            const updateRelationSuccessVO:UpdateTaskRelationVO = {
+                status: 0,
+                isSuccess: true,
+                message: `update relation successfully`
+            }
+            _res.status(HttpStatus.OK).send(updateRelationSuccessVO)
+            return
+            
+        } catch(err) {
+            this.taskLogger.error(`update relation failed with [taskId=${updateRelationDto.taskId},relationId=${updateRelationDto.relationId}]`,"")
+            const updateFailedVO:UpdateTaskRelationVO = {
+                status: HttpStatus.INTERNAL_SERVER_ERROR,
+                isSuccess: false,
+                errMsg: `update relation failed with [taskId=${updateRelationDto.taskId},relationId=${updateRelationDto.relationId}]`
+            }
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(updateFailedVO)
+            return
+        }
     }
 
     @Delete("deleteRelation")
@@ -440,8 +531,36 @@ export class TaskController {
 
     @Get("getRelation")
     async getTaskRelations (@Query() query, @Res() _res) {
-        // todo
-        return
+        const taskId = query.taskId
+        let taskRelationVO:FindTaskRelationVO = {
+            data: [],
+            status: 0,
+            isSuccess: true
+        }
+        try {
+            const res = await this.taskService.findRelation(taskId)
+            let records = []
+            for (let d of res) {
+                let record:TaskRelationRecord = {
+                    taskId: d.task_id,
+                    taskType: d.task_type,
+                }
+                const moduleInfo = await this.mkService.findById(d.module_id)
+                const sceneInfo = await this.sceneService.findById(d.scene_id)
+                d.task_type === "1"?record['moduleId'] = d.module_id:record['sceneId'] = d.scene_id
+                d.task_type === "1"?record['moduleName'] = moduleInfo.module_name:record['sceneName'] = sceneInfo.scene_name
+                records.push(record)
+            }
+            taskRelationVO['data'] = records
+            _res.status(HttpStatus.OK).send(taskRelationVO)
+            return
+        } catch(err) {
+            this.taskLogger.error(`get relation with [taskId=${taskId}] occur error`,"")
+            taskRelationVO['errMsg'] = err.message
+            taskRelationVO['isSuccess'] = false
+            taskRelationVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(taskRelationVO)
+            return
+        }
     }
-
 } 

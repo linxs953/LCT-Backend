@@ -237,25 +237,6 @@ export class TaskService {
             this.taskServiceLogger.error(JSON.stringify(err),"")
             return err
         }
-        // return new Promise(async (resolve,reject) => {
-        //      const  taskData = await this.pgService.at_task_model_relation.findMany({
-        //         where: {
-        //             task_id: taskId.toString()
-        //         },
-        //      })
-        //      if (!taskData || taskData.length == 0) {
-        //         reject(new Error("not found scene data with provided taskId"))
-        //      }
-        //      var moduleIdList = []
-        //      for (let record of taskData) {
-        //         moduleIdList.push(record.module_id)
-        //      }
-        //      this.mkService.findMany(moduleIdList).then(res => {
-        //         resolve(res)
-        //      }).catch(err => {
-        //         reject(err)
-        //      })
-        // })
     }
 
     // 根据detailId获取任务运行记录
@@ -357,7 +338,7 @@ export class TaskService {
         if (!task_id) {
             return this.pgService.at_task_model_relation.findMany()
         }
-        return this.pgService.at_task_model_relation.findFirst({
+        return this.pgService.at_task_model_relation.findMany({
             where: {
                 task_id: task_id
             }

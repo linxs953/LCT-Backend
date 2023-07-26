@@ -8,146 +8,143 @@ datasource db {
 }
 
 model at_case_info {
-  case_no Int @default(autoincrement()) @id
-  case_id String @unique
-  case_name String
-  is_skip Int
-  module_id String
-  pre_fn String
-  after_fn String
-  api_method String
-  api_param String
-  api_url String
-  api_data String
-  api_headers String
-  extract_spec String
-  expect String
-  api_config String
+  case_no       Int      @id @default(autoincrement())
+  case_id       String   @unique
+  case_name     String
+  is_skip       Int
+  module_id     String
+  pre_fn        String
+  after_fn      String
+  api_method    String
+  api_param     String
+  api_url       String
+  api_data      String
+  api_headers   String
+  extract_spec  String
+  expect        String
+  api_config    String
   create_person String
   modify_person String
-  create_time DateTime
-  modify_time DateTime
+  create_time   DateTime
+  modify_time   DateTime
 }
 
-
-model at_scene_info{
-  scene_id String @id
-  module_id String
-  is_enable Int
-  scene_name String
-  data_id String
-  create_time DateTime
-  modify_time DateTime
+model at_scene_info {
+  scene_id      String   @id
+  module_id     String
+  is_enable     Int
+  scene_name    String
+  data_id       String
+  create_time   DateTime
+  modify_time   DateTime
   create_person String
   modify_person String
 }
 
 model at_scene_case_relation {
-  id String @id
-  scene_id String
-  case_id String
-  expect String
-  api_config String
-  create_time DateTime
-  modify_time DateTime
+  id            String   @id
+  scene_id      String
+  case_id       String
+  expect        String
+  api_config    String
+  create_time   DateTime
+  modify_time   DateTime
   create_person String
   modify_person String
-  case_name String
-  step_no Int
-  extract String
+  case_name     String
+  step_no       Int
+  extract       String
 }
-
 
 model at_module_info {
-  module_id String @id
-  module_name String
-  business_name String
-  module_owner String
-  create_time DateTime
-  modify_time DateTime
-  create_person String
-  modify_person String
+  module_id              String                  @id
+  module_name            String
+  business_name          String
+  module_owner           String
+  create_time            DateTime
+  modify_time            DateTime
+  create_person          String
+  modify_person          String
 }
 
-
 model at_task_run_log {
-  log_id String @id
-  task_id String
-  task_run_name String
-  status Int
-  run_result String
-  failed_result String
-  all_case_num Int
+  log_id            String @id
+  task_id           String
+  task_run_name     String
+  status            Int
+  run_result        String
+  failed_result     String
+  all_case_num      Int
   exec_finished_num Int
-  exec_success_num Int
-  exec_failed_num Int
-  create_time String
+  exec_success_num  Int
+  exec_failed_num   Int
+  create_time       String
 }
 
 model at_task_info {
-  task_id String  @id
-  task_name String
-  run_env String
-  is_enable Int
+  task_id         String   @id
+  task_name       String
+  run_env         String
+  is_enable       Int
   auto_run_enable Int
-  create_time DateTime
-  modify_time DateTime
-  create_person String
-  modify_person String
+  create_time     DateTime
+  modify_time     DateTime
+  create_person   String
+  modify_person   String
 }
 
 model at_task_model_relation {
-  id String @id
-  task_id String @unique
-  task_type String
-  module_id String @unique
-  scene_id String @unique
+  id            String         @id
+  task_id       String         @unique
+  task_type     String
+  module_id     String         @unique
+  scene_id      String         @unique
   create_person String
-  create_time DateTime
+  create_time   DateTime
   modify_person String
-  modify_time DateTime
+  modify_time   DateTime
 }
 
 model at_scene_data {
-  id String @id @unique
-  data_line_id String @unique
-  is_enable Int
+  id            String @id @unique
+  data_line_id  String @unique
+  is_enable     Int
   business_name String
-  content String
-  data_id String
-  data_name String
+  content       String
+  data_id       String
+  data_name     String
 }
 
 model atui_widget_info {
-  widget_id String @id
-  page_id String
+  widget_id   String   @id
+  page_id     String
   widget_name String
   widget_meta String
-  is_enable Int
+  is_enable   Int
   create_time DateTime
-  modify_time DateTime 
+  modify_time DateTime
 }
 
 model atui_page_info {
-  page_id String @id
-  page_name String 
-  module_name String
+  page_id       String @id
+  page_name     String
+  module_name   String
   business_name String
-  page_url String
-  page_cn_name String
+  page_url      String
+  page_cn_name  String
 }
 
 model atui_case_data {
-  id String @id
+  id            String   @id
   business_name String
-  module_name String
-  scene_name String
-  data_id String @unique
-  data_line_id String @unique
-  row_value String
-  enable Int
+  module_name   String
+  scene_name    String
+  data_id       String   @unique
+  data_line_id  String   @unique
+  row_value     String
+  enable        Int
   create_person String
   modify_person String
-  create_time DateTime
-  modify_time DateTime
+  create_time   DateTime
+  modify_time   DateTime
 }

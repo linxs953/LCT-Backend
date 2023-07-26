@@ -5,6 +5,10 @@ let ROUTE_CONFIG = {
         "query": ["runId"],
         "body": []
     },
+    "/apitest/taskService/getRelation": {
+        "query": ["taskId"],
+        "body": []
+    },
     "/apitest/taskService/start": {
         "query": ["taskId"],
         "body": []

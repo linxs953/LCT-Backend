@@ -16,6 +16,13 @@ export class SceneService {
             this.sceneServiceLogger = new Logger(SceneService.name)
     }
 
+    async findById(sceneId:string) {
+        return this.pgService.at_scene_info.findFirst({
+            where: {
+                scene_id: sceneId
+            }
+        })
+    }
 
     async findSceneDataByName(sceneName:String) {
         const sceneInfo = await this.pgService.at_scene_info.findFirst({

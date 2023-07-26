@@ -28,3 +28,12 @@ export interface TaskRelationDto {
     moduleIdList?: Array<string>
     sceneIdList?: Array<string>
 }
+
+// 更新关联任务的参数
+export interface TaskRelationUpdataDto {
+    relationId: string
+    taskId: string
+    taskType: string
+    moduleIdList?: Array<string>
+    sceneIdList?: Array<string>
+}

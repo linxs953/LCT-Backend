@@ -2,21 +2,24 @@ import { Request } from 'express';
 
 
 
-export function verifyQuery(req: Request, paramsList:Array<String>) {
+export function verifyQuery(req: Request, paramsList:Array<string>) {
     const query = Object.keys(req.query)
-    if (query.length == 0 && paramsList.length > 0) {
-        return new Error(`not specified param ${paramsList}`)
-    }
+
+    // 如果参数列表长度不一致
+    // if(query.length != paramsList.length) {
+    //     // 缺少参数
+    //     if (query.length < paramsList.length) {
+    //         return new Error(`must contain [${paramsList}] but only specified [${query}]`)
+    //     }
+    // }
+
+    let reqQueryList = Object(query)
+    const reqQueryListStr = JSON.stringify(reqQueryList)
+
+    // 验证预期参数有没有在请求参数中找到
     for (let param=0;param< paramsList.length;param++) {
-        let reqQueryList = Object(query)
-        for (let key=0;key< reqQueryList.length;key++) {
-            if (reqQueryList[key] != paramsList[param] && (query.indexOf(reqQueryList[key]) == reqQueryList.length - 1)) {
-                return new Error(`param [${paramsList[param]}] not specified`)
-            }
-            if (reqQueryList[key] == param) {
-                break
-            }
-            continue
+        if (!reqQueryListStr.includes(paramsList[param])) {
+            return new Error(`param [${paramsList[param]}] not specified`)
         }
     }
     return null
