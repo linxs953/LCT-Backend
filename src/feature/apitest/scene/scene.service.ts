@@ -3,6 +3,8 @@ import { Injectable, Redirect } from "@nestjs/common/decorators";
 import { PostgresService } from "src/feature/common/prisma/prisma.service";
 import { CaseReferService } from "./scene-case-relation.service";
 import { SceneDataService } from "./scene-data.service";
+import { Prisma } from "@prisma/client";
+import { FindSceneAllCaseVO, FindSceneRecordVO, FindSceneRecordsVO } from "./scene.vo";
 
 
 @Injectable()
@@ -17,55 +19,106 @@ export class SceneService {
     }
 
     async findById(sceneId:string) {
-        return this.pgService.at_scene_info.findFirst({
-            where: {
-                scene_id: sceneId
-            }
-        })
+        
+        let result:FindSceneRecordVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_scene_info.findFirst({
+                where: {
+                    scene_id: sceneId
+                }
+            })
+            
+        } catch(err) {
+            this.sceneServiceLogger.error(`find scene info with [sceneId=${sceneId}] failed\n${err.message}`)
+            result.error = err
+        }
+        return result
+        // return this.pgService.at_scene_info.findFirst({
+        //     where: {
+        //         scene_id: sceneId
+        //     }
+        // })
     }
 
     async findSceneDataByName(sceneName:String) {
-        const sceneInfo = await this.pgService.at_scene_info.findFirst({
-            where: {
-                scene_name: sceneName.toString()
+        let result = {
+            data: null,
+            error: null
+        }
+        try {
+            const sceneInfo = await this.pgService.at_scene_info.findFirst({
+                where: {
+                    scene_name: sceneName.toString()
+                }
+            })
+            const sceneDataInfo = await this.dataService.findSceneDataById(sceneInfo.data_id)
+            if (sceneDataInfo.error) {
+                this.sceneServiceLogger.error(`get scene related data failed`,"")
+                result.error = sceneDataInfo.error
+                return result
             }
-        })
-        return this.dataService.findSceneDataById(sceneInfo.data_id)
+            result.data = sceneDataInfo.data
+        } catch(err) {
+            this.sceneServiceLogger.error(`find scene info with [sceneNam=${sceneName}] failed\m${err.message}`,"")
+            result.error = err
+        }
+        return result
     }
 
     async findSceneByModuleId(moduleId:String) {
-        return this.pgService.at_scene_info.findMany({
-            where: {
-                module_id: moduleId.toString(),
-                is_enable: 1
-            }
-        })
+        let result:FindSceneRecordsVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_scene_info.findMany({
+                where: {
+                    module_id: moduleId.toString(),
+                    is_enable: 1
+                }
+            })
+            
+        } catch(err) {
+            this.sceneServiceLogger.error(`find scene info list with [moduleId=${moduleId}] failed\n${err.message}`,"")
+            result.error = err
+        }
+        return result
     }
 
     async findMany(moduleId:String) {
-        return new Promise(async (resolve,reject) => {
-            var result = {}
-            var cache = []
-            // 去scene_info查找同个moduleid的所有记录
-            var sceneIdList = await this.findSceneByModuleId(moduleId)
-            if (sceneIdList.length == 0) {
-                resolve(sceneIdList)
-            } else{
-                const length = sceneIdList.length
-                for (let sceneId of sceneIdList) {
-                    this.caseReferService.findSceneCase(sceneId.scene_id).then(res => {
-                        result[sceneId.scene_name] = res
-                        cache.push(sceneId.scene_name)
-                        if (cache.length == length) {
-                            resolve(result)
-                        }
-                    }).catch(err => {
-                        this.sceneServiceLogger.error("get step data error","")
-                        this.sceneServiceLogger.error(err,"")
-                        reject(err)
-                    })
+        let result:FindSceneAllCaseVO = {
+            data: null,
+            error: null
+        }
+        
+        // 去scene_info查找同个moduleid的所有记录
+        try {
+            let sceneIdList = await this.findSceneByModuleId(moduleId)
+            if (sceneIdList.error) {
+                result.error  = sceneIdList.error
+                return result
+            }
+            for (let sceneId of sceneIdList.data) {
+                const caseInfoList = await this.caseReferService.findSceneCase(sceneId.scene_id)
+                if (caseInfoList.error) {
+                    this.sceneServiceLogger.error(`fetch caselist of scene failed.`,"")
+                    result.error = caseInfoList.error
+                    return result
+                }
+                if (result.data) {
+                    result.data[sceneId.scene_name] = caseInfoList.data
+                } else {
+                    result.data = {
+                        [sceneId.scene_name]: caseInfoList.data
+                    }
                 }
             }
-        })
+        } catch(err) {
+            result.error = err
+        }
+        return result
     }
 }

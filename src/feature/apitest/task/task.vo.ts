@@ -21,6 +21,13 @@ export interface UpdateTaskVO extends CommonFields {
 export interface DeleteTaskVO extends CommonFields  {
 }
 
+
+export interface CreateTaskRelationVO extends CommonFields {
+    data?: {
+        taskType: string
+    }
+}
+
 //更新task relation的返回值结构
 export interface UpdateTaskRelationVO extends CommonFields {}
 
@@ -38,23 +45,7 @@ export interface FindTaskRelationVO extends CommonFields {
     data: Array<TaskRelationRecord>
 }
 
-// export interface CaseVO {
-//     case_no: number,
-//     case_id: string,
-//     case_name: string,
-//     is_skip: number,
-//     module_id: string,
-//     pre_fn: string,
-//     after_fn: string,
-//     api_method: string,
-//     api_param: string,
-//     api_url: string,
-//     api_data: string,
-//     api_headers: string,
-//     extract_spec: string,
-//     expect: string,
-//     api_config: string,
-// }
+
 
 
 // 获取任务配置的场景的返回值结构
@@ -107,4 +98,10 @@ export interface ApiRunVO extends CommonFields{
         taskRunSceneList: Array<TaskRunSceneInfo>
         taskRunInfo: TaskRunInfo
     }
+}
+
+
+export interface FindTaskMetaDataVO {
+    data: {}
+    error: Error
 }

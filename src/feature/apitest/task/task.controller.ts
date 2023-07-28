@@ -3,9 +3,8 @@ import {TaskService } from "./task.service";
 import { APITEST_CONFIG } from "../apitest.config";
 import { Body, Delete, Res } from "@nestjs/common/decorators";
 import { FeatMKService } from "../featMK/featMK.service";
-// import { getErrorNum, getSceneCaseNum } from "./utils/case_statics";
-import {CaseStatics} from "./task.utils"
-import {ApiRunVO, CreateTaskVO, DeleteTaskVO, FindAllSceneOfTaskVO, FindTaskRelationVO, StartTaskVO, TaskRelationRecord, UpdateTaskRelationVO, UpdateTaskVO} from "./task.vo"
+import {CaseStatics, TaskRunRecordParser} from "./task.utils"
+import {ApiRunVO, CreateTaskRelationVO, CreateTaskVO, DeleteTaskVO, FindAllSceneOfTaskVO, FindTaskRelationVO, StartTaskVO, TaskRelationRecord, UpdateTaskRelationVO, UpdateTaskVO} from "./task.vo"
 import { TaskInfoDto, TaskRelationDto, TaskRelationUpdataDto, UpdateTaskDto } from "./task.dto";
 import { Prisma } from "@prisma/client";
 import { SceneService } from "../scene/scene.service";
@@ -36,27 +35,16 @@ export class TaskController {
         }
         try {
             const res = await this.taskService.findMany(taskId)
-            getAllSceneVO['data'] = res
+            if (res.error) {
+                getAllSceneVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+                getAllSceneVO['errMsg'] = res.error.message
+                _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(getAllSceneVO)
+                return
+            }
             getAllSceneVO['message'] = `get all scene with [taskId=${taskId}] successfully`
+            getAllSceneVO['data'] = res.data
             _res.status(HttpStatus.OK).send(getAllSceneVO)
             return
-            // this.taskService.findMany(taskId).then(res => {
-            //     this.taskLogger.debug(`get scene data.\nsceneData: ${JSON.stringify(res)}`)
-            //     _res.status(HttpStatus.OK).send({
-            //         status: HttpStatus.OK,
-            //         isSuccess: true,
-            //         data: res
-            //     })
-            //     return
-            // }).catch(err => {
-            //     this.taskLogger.error(err.stack,"")
-            //     _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-            //         status: HttpStatus.INTERNAL_SERVER_ERROR,
-            //         isSuccess: false,
-            //         error: err.message
-            //     })
-            //     return
-            // })
         } catch(err) {
             this.taskLogger.error(err,"")
             getAllSceneVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
@@ -72,22 +60,32 @@ export class TaskController {
         const sceneId = query.sceneId
         this.taskLogger.debug(`find API_RUN_RESULT by [runId=${detailId}, sceneId=${sceneId}]`)
         const status_ = await this.taskService.getStatus(detailId)
+        let taskRunResultVO:ApiRunVO = {
+            status: 0,
+            isSuccess: true,
+            message: "",
+            data: {
+                taskRunList: [],
+                taskRunSceneList: [],
+                taskRunInfo: undefined
+            }
+        }
+
+        // 获取任务运行记录失败，在service层做了try catch，这里判断是否有error就行
         if (!status_) {
             this.taskLogger.error(`find API_RUN_RESULT null with [runId=${detailId}]`,"")
-            const _:ApiRunVO = {
-                isSuccess: false,
-                message: `not found API_RUN_RESULT with [runId=${detailId}]`,
-                data: null,
-                status: 0
-            }
-            return _
+            taskRunResultVO['status'] = HttpStatus.BAD_REQUEST
+            taskRunResultVO['isSuccess'] = false
+            taskRunResultVO['message'] = `not found API_RUN_RESULT with [runId=${detailId}]`
+            taskRunResultVO['data'] = null
+            return taskRunResultVO
         }
         const errorDetail = status_['failed_result'] == "{}" ? null:JSON.parse(status_['failed_result'])
         const runResultDetail = status_['run_result'] == "{}" ? null:JSON.parse(status_['run_result'])
         let taskRunSceneInfoList = []
         let allSceneData = []
-        // 统计有多少个场景
 
+        // 统计有多少个场景，按照场景的执行成功还是失败，取相对应的字段
         let sceneNameList:any
         if (Object.keys(errorDetail).length > Object.keys(runResultDetail).length) {
             sceneNameList = Object.keys(errorDetail)
@@ -95,129 +93,90 @@ export class TaskController {
             sceneNameList = Object.keys(runResultDetail)
         }
 
-        for (let scene of sceneNameList) {
-            let allCaseNumOfScene = CaseStatics.getSceneCaseNum(errorDetail,scene)
-            // 如果执行成功，拿runResultDetail
-            allCaseNumOfScene = allCaseNumOfScene?allCaseNumOfScene:CaseStatics.getSceneCaseNum(runResultDetail,scene)
-            const sceneFailedNum = CaseStatics.getErrorNum(errorDetail, scene)
-            const sceneSuccessNum = allCaseNumOfScene - sceneFailedNum            
-            taskRunSceneInfoList.push({
-                sceneName: scene,
-                execSuccessNum: sceneSuccessNum,
-                execFailNum: sceneFailedNum,
-                sceneTotalNum: allCaseNumOfScene,
-                runStatus: sceneFailedNum > 0?false:true
-            })
-
-            let caseList:any
-            if (Object.keys(errorDetail[scene]).length > Object.keys(runResultDetail[scene]).length) {
-                caseList = Object.keys(errorDetail[scene])
-            } else {
-                caseList = Object.keys(runResultDetail[scene])
-            }
-
-            for (let caseName of caseList) {
-                const stage =  (errorDetail[scene][caseName]&&Object.keys(errorDetail[scene][caseName]).length>0)?
-                                    Object.keys(errorDetail[scene][caseName]).toString():
-                                    "success"
-                let errorInfo = (errorDetail[scene][caseName]&&errorDetail[scene][caseName])?
-                                    errorDetail[scene][caseName][stage]:
-                                    null
-                const resultInfo =  (runResultDetail[scene][caseName]&&runResultDetail[scene][caseName])?
-                                    runResultDetail[scene][caseName]:
-                                    null
-                if (errorInfo) {
-                    switch(typeof(errorInfo['resp'])) {
-                        // 结果是字符串，可能出现在预处理阶段
-                        case "string": {
-                            errorInfo = errorInfo['resp']
-                            break
-                        }
-                        // 结果是对象，可能出现在请求阶段getResponse或者在verify阶段
-                        case "object": {
-                            if (errorInfo['resp']['error']) {
-                                errorInfo = errorInfo['resp']['error']['result']
-                            } else {
-                                // 断言失败
-                                errorInfo = errorInfo['assertFailDetail']
-                            }
-                            break
-                        }
-                    }
-                } else {
-                    errorInfo = null
-                }
-
-                const runStatus = errorInfo?false:true
-
-                // 组装场景运行结果taskRunList
-                const stepResult =  {
-                    sceneName: scene,
-                    stepName: caseName,
-                    runStatus: runStatus,
-                    stage: stage,
-                    error: errorInfo,
-                    result: resultInfo&&resultInfo['response']?
-                                resultInfo['response']:
-                                ((resultInfo&&resultInfo['error']['result'])?
-                                resultInfo['error']['result']:resultInfo)
-                }
-                allSceneData.push(stepResult)
-            }
-            
-        }
-        
-        const res:ApiRunVO = {
-            isSuccess: true,
-            message: "fetch task run record successfully",
-            data: {
-                taskRunList: allSceneData,
-                taskRunSceneList: taskRunSceneInfoList,
-                taskRunInfo: {
-                    taskId: status_.task_id,
-                    taskRunId: detailId,
-                    taskStatus: status_['status'],
-                    taskRunName: status_['task_run_name'],
-                    totalNum: status_['all_case_num'],
-                    successNum: status_['exec_success_num'],
-                    failedNum: status_['exec_failed_num'],
-                    executedNum: status_['exec_finished_num'],
-                    createTime: status_['create_time']
-                },
+        // 调用任务运行日志解析器
+        const parseResult = TaskRunRecordParser.recordParse({
+                error: errorDetail,
+                result: runResultDetail,
+                nameList: sceneNameList,
             },
-            status: 0
+            {
+                sceneInfoList: taskRunSceneInfoList,
+                allSceneList: allSceneData
+            },
+            [
+                sceneId
+            ]
+        )
+
+        taskRunSceneInfoList = parseResult['sceneInfoList']
+        allSceneData = parseResult['allSceneList']
+        taskRunResultVO['isSuccess'] = true
+        taskRunResultVO['message'] = "fetch task run record successfully"
+        taskRunResultVO['status'] = HttpStatus.OK
+        taskRunResultVO['data'] = {
+            taskRunInfo: {
+                taskId: status_.task_id,
+                taskRunId: detailId,
+                taskStatus: status_['status'],
+                taskRunName: status_['task_run_name'],
+                totalNum: status_['all_case_num'],
+                successNum: status_['exec_success_num'],
+                failedNum: status_['exec_failed_num'],
+                executedNum: status_['exec_finished_num'],
+                createTime: status_['create_time']
+            },
+            taskRunSceneList: taskRunSceneInfoList,
+            taskRunList: allSceneData,
         }
-        return res
+        return taskRunResultVO
     }
 
     @Post(`start`)
     async start(@Query() query, @Res() _res) {
         this.taskLogger.debug(`process start task with [taskId=${query.taskId}]`)
+        let startTaskVO:StartTaskVO = {
+            status: 0,
+            isSuccess: true,
+            message: "",
+            logId: ""
+        }
         try {
             const logId = String("DTL" + random(10)).toUpperCase()
             let taskInfo = await this.taskService.findTaskInfoByTaskId(query.taskId)
             let taskRelation = await this.taskService.findTaskRelationByTaskId(query.taskId)
-            const taskPromiseList = await this.taskService.runTask(query.taskId,logId,taskRelation,taskInfo)
+            if (taskInfo.error) {
+                startTaskVO['status'] = HttpStatus.BAD_REQUEST
+                startTaskVO['errMsg'] = taskInfo.error.message
+                startTaskVO['isSuccess'] = false
+                _res.status(HttpStatus.BAD_REQUEST).send(startTaskVO)
+                return
+            }
+            if (taskRelation.error) {
+                startTaskVO['status'] = HttpStatus.BAD_REQUEST
+                startTaskVO['errMsg'] = taskRelation.error.message
+                startTaskVO['isSuccess'] = false
+                _res.status(HttpStatus.BAD_REQUEST).send(startTaskVO)
+                return
+            }
+
+            // todo: 后期taskService.runTask调整之后需要进行异常错误处理，并去除try catch
+            const taskPromiseList = await this.taskService.runTask(query.taskId,logId,taskRelation.data,taskInfo.data)
             Promise.all(taskPromiseList).catch(err => {
                 this.taskLogger.error("run promise scene error","")
                 this.taskLogger.error(JSON.stringify(err),"")
             })
-            const tresp:StartTaskVO = {
-                status: HttpStatus.OK,
-                isSuccess: true,
-                logId: logId,
-                message: "dispatch task successfully"
-            }
-            _res.status(HttpStatus.OK).send(tresp)
+            startTaskVO['message'] = "dispatch task successfully"
+            startTaskVO['logId'] = logId
+            startTaskVO['isSuccess'] = true
+            startTaskVO['status'] = HttpStatus.OK
+            _res.status(HttpStatus.OK).send(startTaskVO)
             return
         } catch (err) {
             this.taskLogger.error(err.stack,"")
-            const tresp:StartTaskVO = {
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-                isSuccess: false,
-                errMsg: err.message,
-            }
-            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(tresp)
+            startTaskVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            startTaskVO['isSuccess'] = false
+            startTaskVO['errMsg'] = err.message
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(startTaskVO)
             return
         }
     }
@@ -236,118 +195,121 @@ export class TaskController {
             create_person: "admin",
             modify_person: "admin"
         }
-        try {
-            const res  = await this.taskService.createTaskInfo(taskInfo)
-            const createTaskVO:CreateTaskVO = {
-                status: 0,
-                isSuccess: true,
-                message: "create task successfully",
-                data: {
-                    task_id: res.task_id
-                }
-            }
-            _res.status(HttpStatus.OK).send(createTaskVO)
-            return
-        } catch(err) {
-            const createTaskVO:CreateTaskVO = {
-                status: 500,
-                isSuccess: false,
-                errMsg: err.message,
-                data: null
-            }
+        let createTaskVO:CreateTaskVO = {
+            status: 0,
+            isSuccess: true,
+            data: {
+                task_id: ""
+            },
+        }
+        const res  = await this.taskService.createTaskInfo(taskInfo)
+        if (res.error) {
+            createTaskVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            createTaskVO['isSuccess'] = false
+            createTaskVO['errMsg'] = res.error.message
+            createTaskVO['data'] = null
             _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(createTaskVO)
             return
         }
-        
+        createTaskVO['status'] = HttpStatus.OK
+        createTaskVO['isSuccess'] = true
+        createTaskVO['message'] = "create task successfully"
+        createTaskVO['data'] = {
+            task_id: res.data.task_id
+        }
+        _res.status(HttpStatus.OK).send(createTaskVO)
+        return
     }
 
     @Post(`updateTask`)
     async updateTask(@Body() updateTaskDto:UpdateTaskDto, @Res() _res) {
-        try {
-            const res = await this.taskService.updateTaskInfo(updateTaskDto.condition, updateTaskDto.data)
-            const updateTaskVO:UpdateTaskVO = {
-                status: 0,
-                isSuccess: true,
-                message: "update task info succesfully"
-            }
-            _res.status(HttpStatus.OK).send(updateTaskVO)
-            return
-        } catch(err) {
-            const updateTaskVO:UpdateTaskVO = {
-                status: 500,
-                isSuccess: false,
-                message: err.message
-            }
+        let updateTaskVO:UpdateTaskVO = {
+            status: 0,
+            isSuccess: false,
+            message: ""
+        }
+        const res = await this.taskService.updateTaskInfo(updateTaskDto.condition, updateTaskDto.data)
+        if (res.error) {
+            updateTaskVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            updateTaskVO['isSuccess'] = false
+            updateTaskVO['errMsg'] = res.error.message
             _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(updateTaskVO)
             return
         }
+        updateTaskVO['status'] = HttpStatus.OK
+        updateTaskVO['isSuccess'] = true
+        updateTaskVO['message'] = "update task info succesfully"
+        _res.status(HttpStatus.OK).send(updateTaskVO)
+        return
     }
 
     @Delete(`deleteTask`)
     async deleteTask(@Query() query, @Res() _res) {
         const taskId = query.taskId
+        let deleteTaskVO:DeleteTaskVO = {
+            status: 0,
+            isSuccess: false,
+        }
         if (!taskId) {
-            const deleteTaskVO:DeleteTaskVO = {
-                status: 0,
-                isSuccess: false,
-                errMsg: "task id is invalid"
-            }
+            deleteTaskVO['status'] = HttpStatus.BAD_REQUEST
+            deleteTaskVO['isSuccess'] = false
+            deleteTaskVO['errMsg'] = "task id is invalid"
             _res.status(HttpStatus.BAD_REQUEST).send(deleteTaskVO)
             return 
         }
-        try {
-            await this.taskService.deleteTaskInfo(taskId)
-            const deleteTaskVO:DeleteTaskVO = {
-                status: 0,
-                isSuccess: true,
-                message: "delete task successfully"
-            }
+        const result = await this.taskService.deleteTaskInfo(taskId)
+        if (result.error) {
+            deleteTaskVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            deleteTaskVO['isSuccess'] = false
+            deleteTaskVO['errMsg'] = result.error.message
             _res.status(HttpStatus.OK).send(deleteTaskVO)
             return
-        } catch(err) {
-            const deleteTaskVO:DeleteTaskVO = {
-                status: 500,
-                isSuccess: false,
-                errMsg: err.message
-            }
-            _res.status(HttpStatus.OK).send(deleteTaskVO)
-            return
-        }        
+        }
+        deleteTaskVO['status'] = HttpStatus.OK
+        deleteTaskVO['isSuccess'] = true
+        deleteTaskVO['message'] = "delete task successfully"
+        _res.status(HttpStatus.OK).send(deleteTaskVO)
+        return
     }
 
 
     @Post(`createRelation`)
     async relateTaskWithModule(@Body() taskRelation:TaskRelationDto, @Res() _res) {
         let dataList = []
+        let createRelationVO:CreateTaskRelationVO = {
+            status: 0,
+            isSuccess: false,
+        }
         if (taskRelation.moduleIdList && taskRelation.sceneIdList) {
             // 不能同时指定模块和场景
             this.taskLogger.error("no support assign module_id and scene_id at the same time","")
-            _res.status(HttpStatus.BAD_REQUEST).send({
-                status: HttpStatus.BAD_REQUEST,
-                errMsg: "assign module_id and scene_id at the same time",
-                data: null,
-                isSuccess: false
-            })
+            createRelationVO['status'] = HttpStatus.BAD_REQUEST
+            createRelationVO['isSuccess'] = false
+            createRelationVO['errMsg'] = "assign module_id and scene_id at the same time"
+            createRelationVO['data'] = null
+            _res.status(HttpStatus.BAD_REQUEST).send(createRelationVO)
             return
         }
         
         if (taskRelation.moduleIdList && taskRelation.moduleIdList.length === 0 && !taskRelation.sceneIdList) {
-            _res.status(HttpStatus.OK).send({
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-                errMsg: "module id list no data",
-                isSuccess: false,
+            createRelationVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            createRelationVO['isSuccess'] = false
+            createRelationVO['errMsg'] = "module id list no data"
+            createRelationVO['data'] = {
                 taskType: taskRelation.taskType
-            })
+            }
+            _res.status(HttpStatus.OK).send(createRelationVO)
             return
         }
 
         if (taskRelation.sceneIdList && !taskRelation.moduleIdList && taskRelation.sceneIdList.length === 0) {
-            _res.status(HttpStatus.OK).send({
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-                errMsg: "scene id list no data",
-                isSuccess: false,
+            createRelationVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            createRelationVO['isSuccess'] = false
+            createRelationVO['errMsg'] = "scene id list no data"
+            createRelationVO['data'] = {
                 taskType: taskRelation.taskType
-            })
+            }
+            _res.status(HttpStatus.OK).send(createRelationVO)
             return
         }
 
@@ -359,76 +321,80 @@ export class TaskController {
         }
 
         for (let Id of dataList) {
-            try {
-                let taskRelationCreateInput:Prisma.at_task_model_relationCreateInput = {
-                    id: `RELATE${random(10)}`,
-                    task_id: taskRelation.taskId,
-                    task_type: "1",
-                    module_id: "",
-                    scene_id: "",
-                    create_person: "admin",
-                    create_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm'),
-                    modify_person: "admin",
-                    modify_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm')
+            let taskRelationCreateInput:Prisma.at_task_model_relationCreateInput = {
+                id: `RELATE${random(10)}`,
+                task_id: taskRelation.taskId,
+                task_type: "1",
+                module_id: "",
+                scene_id: "",
+                create_person: "admin",
+                create_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm'),
+                modify_person: "admin",
+                modify_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm')
+            }
+
+            // 根据任务类型，设置relation的moduleid 或者 sceneid
+            if (taskRelation.taskType === "1") {
+                taskRelationCreateInput['module_id'] = Id
+            } else {
+                taskRelationCreateInput['scene_id'] = Id
+            }
+            const createRelationRs = await this.taskService.createTaskRelation(taskRelationCreateInput)
+            if (createRelationRs.error) {
+                this.taskLogger.error(`create task relation failed for error ${createRelationRs.error.message}\n, start delete task relation with taskId: ${taskRelation.taskId}`,"")
+                const removeRelationRs = await this.taskService.removeTaskRelation(taskRelation.taskId)
+                
+                // 创建失败，删除task对应的relation失败
+                if (removeRelationRs.error) {
+                    this.taskLogger.error(`remove task relation with taskId: ${taskRelation.taskId} failed for ${removeRelationRs.error.message}`)
+                    createRelationVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+                    createRelationVO['isSuccess'] = false
+                    createRelationVO['errMsg'] = removeRelationRs.error.message
+                    createRelationVO['data'] = {
+                            taskType: taskRelation.taskType
+                    }
+                    _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(createRelationVO)
+                    return 
                 }
 
-                // 根据任务类型，设置relation的moduleid 或者 sceneid
-                if (taskRelation.taskType === "1") {
-                    taskRelationCreateInput['module_id'] = Id
-                } else {
-                    taskRelationCreateInput['scene_id'] = Id
+                // 创建失败，删除task对应的relation成功
+                this.taskLogger.log(`remove task relation with taskId: ${taskRelation.taskId} successfully`)
+                createRelationVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+                createRelationVO['isSuccess'] = false
+                createRelationVO['errMsg'] = createRelationRs.error.message
+                createRelationVO['data'] = {
+                    taskType: taskRelation.taskType
                 }
-                await this.taskService.createTaskRelation(taskRelationCreateInput)
-            } catch(err) {
-                this.taskLogger.error(`create task relation failed for error ${err.message}\n, start delete task relation with taskId: ${taskRelation.taskId}`,"")
-                try {
-                    // 创建relation失败，删除taskId关联的所有relation
-                    await this.taskService.removeTaskRelation(taskRelation.taskId)
-                    this.taskLogger.log(`remove task relation with taskId: ${taskRelation.taskId} successfully`)
-                    _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-                        status: HttpStatus.INTERNAL_SERVER_ERROR,
-                        errMsg: err.message,
-                        isSuccess: false,
-                        taskType: taskRelation.taskType,
-                        data: null
-                    })
-                    return
-                } catch(removeErr) {
-                    // 删除relation失败
-                   this.taskLogger.error(`remove task relation with taskId: ${taskRelation.taskId} failed for ${removeErr.message}`)
-                   _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-                        status: HttpStatus.INTERNAL_SERVER_ERROR,
-                        errMsg: removeErr.message,
-                        isSuccess: false,
-                        taskType: taskRelation.taskType,
-                        data: null
-                    })
-                   return 
-                }
+                _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(createRelationVO)
+                return
             }
+            
+            // 创建relation成功
+            createRelationVO['status'] = HttpStatus.OK
+            createRelationVO['message'] = "create task relation successfully"
+            createRelationVO['isSuccess'] = true
+            createRelationVO['data'] = {
+                taskType: taskRelation.taskType
+            }
+            _res.status(HttpStatus.OK).send(createRelationVO)
+            return 
         }
-        // 创建relation成功
-        _res.status(HttpStatus.OK).send({
-            status: HttpStatus.OK,
-            message: "create task relation successfully",
-            isSuccess: true,
-            taskType: taskRelation.taskType
-        })
-        return 
     }
 
 
     // todo: 考虑后面把for循环调用service移到service内部处理
     @Post("updateRelation")
     async updateTaskRelation(@Body() updateRelationDto:TaskRelationUpdataDto, @Res() _res) {
+        let updateVO:UpdateTaskRelationVO = {
+            status: 0,
+            isSuccess: false
+        }
         switch(updateRelationDto.taskType) {
             case "1": {
                 if ((!updateRelationDto.moduleIdList || updateRelationDto.moduleIdList.length === 0)){
-                    const updateVO:UpdateTaskRelationVO = {
-                        status: HttpStatus.BAD_REQUEST,
-                        isSuccess: false,
-                        errMsg: "taskType=1 and moduleIdList invalid"
-                    }
+                    updateVO['status'] = HttpStatus.BAD_REQUEST
+                    updateVO['isSuccess'] = false
+                    updateVO['errMsg'] = "taskType->1 but moduleIdList invalid"
                     _res.status(HttpStatus.BAD_REQUEST).send(updateVO)
                     return
                 }
@@ -436,22 +402,18 @@ export class TaskController {
             }
             case "2": {
                 if (!updateRelationDto.sceneIdList || updateRelationDto.sceneIdList.length === 0) {
-                    const updateVO:UpdateTaskRelationVO = {
-                        status: HttpStatus.BAD_REQUEST,
-                        isSuccess: false,
-                        errMsg: "taskType=2 and sceneIdList invalid"
-                    }
+                    updateVO['status'] = HttpStatus.BAD_REQUEST
+                    updateVO['isSuccess'] = false
+                    updateVO['errMsg'] = "taskType->2 but sceneIdList invalid"
                     _res.status(HttpStatus.BAD_REQUEST).send(updateVO)
                     return 
                 }
                 break
             }
             default: {
-                const updateVO = {
-                    status: HttpStatus.BAD_REQUEST,
-                    isSuccess: false,
-                    errMsg: "unsupported taskType"
-                }
+                updateVO['status'] = HttpStatus.BAD_REQUEST
+                updateVO['isSuccess'] = false
+                updateVO['errMsg'] = "unsupported taskType"
                 _res.status(HttpStatus.BAD_REQUEST).send(updateVO)
                 return
             }
@@ -460,73 +422,66 @@ export class TaskController {
 
         let idList = updateRelationDto.taskType === "1"?updateRelationDto.moduleIdList:updateRelationDto.sceneIdList
 
-        try {
-            for (let idStr of idList) {
-                const conditon:Prisma.at_task_model_relationWhereUniqueInput = {
-                    task_id: updateRelationDto.taskId,
-                    id: updateRelationDto.relationId
-                }
-                
-                let data:Prisma.at_task_model_relationUpdateInput = {
-                    task_type: updateRelationDto.taskType,
-                    modify_person: "admin",
-                    modify_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm')
-                }
-                if (updateRelationDto.taskType === "1") {
-                    data['module_id'] = idStr
-                } else {
-                    data['scene_id'] = idStr
-                }
-                await this.taskService.updateTaskRelation(conditon, data)    
+        for (let idStr of idList) {
+            const conditon:Prisma.at_task_model_relationWhereUniqueInput = {
+                task_id: updateRelationDto.taskId,
+                id: updateRelationDto.relationId
             }
-            const updateRelationSuccessVO:UpdateTaskRelationVO = {
-                status: 0,
-                isSuccess: true,
-                message: `update relation successfully`
-            }
-            _res.status(HttpStatus.OK).send(updateRelationSuccessVO)
-            return
             
-        } catch(err) {
-            this.taskLogger.error(`update relation failed with [taskId=${updateRelationDto.taskId},relationId=${updateRelationDto.relationId}]`,"")
-            const updateFailedVO:UpdateTaskRelationVO = {
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-                isSuccess: false,
-                errMsg: `update relation failed with [taskId=${updateRelationDto.taskId},relationId=${updateRelationDto.relationId}]`
+            let data:Prisma.at_task_model_relationUpdateInput = {
+                task_type: updateRelationDto.taskType,
+                modify_person: "admin",
+                modify_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm')
             }
-            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(updateFailedVO)
-            return
+            if (updateRelationDto.taskType === "1") {
+                data['module_id'] = idStr
+            } else {
+                data['scene_id'] = idStr
+            }
+            const updateRelationRs = await this.taskService.updateTaskRelation(conditon, data)    
+            if (updateRelationRs.error) {
+                updateVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+                updateVO['isSuccess'] = false
+                updateVO['message'] = `update relation failed with [taskId=${updateRelationDto.taskId},relationId=${updateRelationDto.relationId}]`
+                _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(updateVO)
+                return
+            }
         }
+        updateVO['status'] = HttpStatus.OK
+        updateVO['isSuccess'] = true
+        updateVO['message'] = "update relation successfully"
+        _res.status(HttpStatus.OK).send(updateVO)
+        return
     }
 
     @Delete("deleteRelation")
     async deleteTaskRelation(@Query() query, @Res() _res) {
         const taskId = query.taskId
+        let deleteVO:DeleteTaskVO = {
+            status: 0,
+            isSuccess: false
+        }
         if (!taskId) {
-            _res.status(HttpStatus.BAD_REQUEST).send({
-                status: HttpStatus.BAD_REQUEST,
-                errMsg: "taskId is invalid",
-                isSuccess: false
-            })
+            deleteVO['status'] = HttpStatus.BAD_REQUEST
+            deleteVO['isSuccess'] = false
+            deleteVO['errMsg'] = "taskId is invalid"
+            _res.status(HttpStatus.BAD_REQUEST).send(deleteVO)
             return
         }
-        try {
-            await this.taskService.removeTaskRelation(taskId)
-            _res.status(HttpStatus.OK).send({
-                status: HttpStatus.OK,
-                message: "delete relation successfully",
-                isSuccess: true
-            })
-            return
-        } catch(err) {
-            this.taskLogger.error(`remove task relation with taskId: ${taskId} failed for ${err.message}`)
-            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-                status: HttpStatus.INTERNAL_SERVER_ERROR,
-                errMsg: `delete relation failed for ${err.message}`,
-                isSuccess: true
-            })
+        const rmTaskRelationRs = await this.taskService.removeTaskRelation(taskId)
+        if (rmTaskRelationRs.error) {
+            deleteVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            deleteVO['isSuccess'] = false
+            deleteVO['errMsg'] = `delete relation failed for ${rmTaskRelationRs.error.message}`
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(deleteVO)
             return
         }
+        deleteVO['status'] = HttpStatus.OK
+        deleteVO['isSuccess'] = true
+        deleteVO['message'] = "delete relation successfully"
+        _res.status(HttpStatus.OK).send(deleteVO)
+        return
+      
     }
 
     @Get("getRelation")
@@ -539,16 +494,37 @@ export class TaskController {
         }
         try {
             const res = await this.taskService.findRelation(taskId)
+            if (res.error) {
+                taskRelationVO['status'] = HttpStatus.BAD_REQUEST
+                taskRelationVO['isSuccess'] = false
+                taskRelationVO['errMsg'] = res.error.message
+                _res.status(HttpStatus.BAD_REQUEST).send(taskRelationVO)
+                return 
+            }
             let records = []
-            for (let d of res) {
+            for (let d of res.data) {
                 let record:TaskRelationRecord = {
                     taskId: d.task_id,
                     taskType: d.task_type,
                 }
                 const moduleInfo = await this.mkService.findById(d.module_id)
                 const sceneInfo = await this.sceneService.findById(d.scene_id)
+                if (moduleInfo.error) {
+                    taskRelationVO['status'] = HttpStatus.BAD_REQUEST
+                    taskRelationVO['isSuccess'] = false
+                    taskRelationVO['errMsg'] = moduleInfo.error.message
+                    _res.status(HttpStatus.BAD_REQUEST).send(taskRelationVO)
+                    return
+                }
+                if (sceneInfo.error) {
+                    taskRelationVO['status'] = HttpStatus.BAD_REQUEST
+                    taskRelationVO['isSuccess'] = false
+                    taskRelationVO['errMsg'] = sceneInfo.error.message
+                    _res.status(HttpStatus.BAD_REQUEST).send(taskRelationVO)
+                    return 
+                }
                 d.task_type === "1"?record['moduleId'] = d.module_id:record['sceneId'] = d.scene_id
-                d.task_type === "1"?record['moduleName'] = moduleInfo.module_name:record['sceneName'] = sceneInfo.scene_name
+                d.task_type === "1"?record['moduleName'] = moduleInfo.data.module_name:record['sceneName'] = sceneInfo.data.scene_name
                 records.push(record)
             }
             taskRelationVO['data'] = records

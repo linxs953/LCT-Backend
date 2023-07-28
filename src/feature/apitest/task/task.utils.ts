@@ -82,3 +82,90 @@ export class SceneDataTrans {
 }
 
 
+
+/*
+    任务运行记录解析
+*/ 
+export class TaskRunRecordParser {
+    static recordParse(source:{},returnResult:{},fileter=[]) {
+        for (let scene of source['nameList']) {
+            let allCaseNumOfScene = CaseStatics.getSceneCaseNum(source['error'],scene)
+
+            // 如果执行成功，拿runResultDetail
+            allCaseNumOfScene = allCaseNumOfScene?allCaseNumOfScene:CaseStatics.getSceneCaseNum(source['result'],scene)
+            const sceneFailedNum = CaseStatics.getErrorNum(source['error'], scene)
+            const sceneSuccessNum = allCaseNumOfScene - sceneFailedNum            
+            returnResult['sceneInfoList'].push({
+                sceneName: scene,
+                execSuccessNum: sceneSuccessNum,
+                execFailNum: sceneFailedNum,
+                sceneTotalNum: allCaseNumOfScene,
+                runStatus: sceneFailedNum > 0?false:true
+            })
+
+            let caseList:any
+            if (Object.keys(source['error'][scene]).length > Object.keys(source['result'][scene]).length) {
+                caseList = Object.keys(source['error'][scene])
+            } else {
+                caseList = Object.keys(source['result'][scene])
+            }
+
+
+            for (let caseName of caseList) {
+                // errorDetail的key是阶段，值是错误信息
+                const stage =  (source['error'][scene][caseName]&&Object.keys(source['error'][scene][caseName]).length>0)?
+                                    Object.keys(source['error'][scene][caseName]).toString():
+                                    "success"
+                let errorInfo = (source['error'][scene][caseName]&&source['error'][scene][caseName])?
+                                    source['error'][scene][caseName][stage]:
+                                    null
+                const resultInfo =  (source['result'][scene][caseName]&&source['result'][scene][caseName])?
+                                    source['result'][scene][caseName]:
+                                    null
+                if (errorInfo) {
+                    switch(typeof(errorInfo['resp'])) {
+                        // 结果是字符串，可能出现在预处理阶段
+                        case "string": {
+                            errorInfo = errorInfo['resp']
+                            break
+                        }
+                        // 结果是对象，可能出现在请求阶段getResponse或者在verify阶段
+                        case "object": {
+                            if (errorInfo['resp']['error']) {
+                                errorInfo = errorInfo['resp']['error']['result']
+                            } else {
+                                // 断言失败
+                                errorInfo = errorInfo['assertFailDetail']
+                            }
+                            break
+                        }
+                    }
+                } else {
+                    errorInfo = null
+                }
+
+                // 根据errorInfo判断是否运行是否成功
+                const runStatus = errorInfo?false:true
+
+                // 组装场景运行结果taskRunList
+                const stepResult =  {
+                    sceneName: scene,
+                    stepName: caseName,
+                    runStatus: runStatus,
+                    stage: stage,
+                    error: errorInfo,
+
+                    // 拿成功的response，没有就拿失败的结果
+                    result: resultInfo&&resultInfo['response']?
+                                resultInfo['response']:
+                                ((resultInfo&&resultInfo['error']['result'])?
+                                resultInfo['error']['result']:resultInfo)
+                }
+                returnResult['allSceneList'].push(stepResult)
+            }
+            
+        }
+        return returnResult
+    }
+}
+
