@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { PostgresService } from "src/feature/common/prisma/prisma.service";
+import { PostgresService } from "src/common/prisma/prisma.service";
 import { FindSceneDataRecordVO } from "./scene.vo";
 
 @Injectable()
@@ -26,5 +26,22 @@ export class SceneDataService {
             result.error = err
         }
         return result 
+    }
+
+
+    async createSceneData() {
+        
+    }
+
+    async updateSceneData() {
+
+    }
+
+    async deleteSceneData() {
+
+    }
+
+    async importSceneData(fileContent:string) {
+        
     }
 }

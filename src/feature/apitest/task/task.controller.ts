@@ -59,7 +59,8 @@ export class TaskController {
         const detailId = query.runId
         const sceneId = query.sceneId
         this.taskLogger.debug(`find API_RUN_RESULT by [runId=${detailId}, sceneId=${sceneId}]`)
-        const status_ = await this.taskService.getStatus(detailId)
+        let status_ = await this.taskService.getStatus(detailId)
+
         let taskRunResultVO:ApiRunVO = {
             status: 0,
             isSuccess: true,
@@ -72,11 +73,11 @@ export class TaskController {
         }
 
         // 获取任务运行记录失败，在service层做了try catch，这里判断是否有error就行
-        if (!status_) {
+        if (status_.error) {
             this.taskLogger.error(`find API_RUN_RESULT null with [runId=${detailId}]`,"")
             taskRunResultVO['status'] = HttpStatus.BAD_REQUEST
             taskRunResultVO['isSuccess'] = false
-            taskRunResultVO['message'] = `not found API_RUN_RESULT with [runId=${detailId}]`
+            taskRunResultVO['message'] = `not found API_RUN_RESULT with [runId=${detailId}] for ${status_.error.message}`
             taskRunResultVO['data'] = null
             return taskRunResultVO
         }
@@ -115,7 +116,7 @@ export class TaskController {
         taskRunResultVO['status'] = HttpStatus.OK
         taskRunResultVO['data'] = {
             taskRunInfo: {
-                taskId: status_.task_id,
+                taskId: status_.data.task_id,
                 taskRunId: detailId,
                 taskStatus: status_['status'],
                 taskRunName: status_['task_run_name'],

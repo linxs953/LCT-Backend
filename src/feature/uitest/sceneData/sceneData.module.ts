@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { SceneDataService } from "./sceneData.service";
 import { SceneDataController } from "./sceneData.controller";
-import { PostgresModule } from "src/feature/common/prisma/prisma.module";
+import { PostgresModule } from "src/common/prisma/prisma.module";
 
 @Module({
     imports: [PostgresModule],

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { PostgresService } from "src/feature/common/prisma/prisma.service";
+import { PostgresService } from "src/common/prisma/prisma.service";
 import { SceneService } from "../scene/scene.service";
 import { Prisma } from "@prisma/client";
 import { FindModuleInfoRecordVO, FindModuleInfoRecordsVO } from "./featMK.vo";
@@ -39,21 +39,6 @@ export class FeatMKService {
                 } else {
                     result.data[module.module_name] = res.data
                 }
-                // cache.push(mid)
-                // if (cache.length == moduleList.length) {
-                //     return result
-                // }
-                // this.sceneService.findMany(mid).then(res => {
-                //     result[module.module_name] = res
-                //     cache.push(mid)
-                //     if (cache.length == moduleList.length) {
-                //         return result
-                //     }
-                // }).catch(err => {
-                //     this.mkServiceLogger.error("call sceneService error","")
-                //     this.mkServiceLogger.error(err,"")
-                //     throw err
-                // })
             } catch(err) {
                 this.mkServiceLogger.error(`find module info  with [moduldId=${mid}] occur error`, err.stack)
                 result.error = err

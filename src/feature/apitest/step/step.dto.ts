@@ -1,21 +1,52 @@
+import { Prisma } from "@prisma/client"
 
 
-export class CreateStepDto  {
-    stepName: String
-    preFn: String
-    afterFn: String
-    apiMethod: String
-    apiUrl: String
-    apiParam: String
-    apiData: String
-    apiHeaders: String
-    extractSpec: String
-    updatePerson: String
-    createPerson: String
+export interface CreateStepDto  {
+    caseName: string
+    stepName: string
+    preFn: string
+    isSkip: number
+    moduleId: string
+    afterFn: string
+    expect: string
+    apiConfig: string
+    apiMethod: string
+    apiUrl: string
+    apiParam: string
+    apiData: string
+    apiHeaders: string
+    extractSpec: string
+    modifyPerson: string
+    createPerson: string
     createTime: Date
-    updateTime: Date
+    modifyTime: Date
+}
 
-    verify = () => {
-        return null
+export interface updateCaseInfoDto {
+    condition: Prisma.at_case_infoWhereUniqueInput
+    data: {
+        caseName: string
+        stepName: string
+        preFn: string
+        isSkip: number
+        moduleId: string
+        afterFn: string
+        expect: string
+        apiConfig: string
+        apiMethod: string
+        apiUrl: string
+        apiParam: string
+        apiData: string
+        apiHeaders: string
+        extractSpec: string
+        modifyPerson: string
+        createPerson: string
+        createTime: Date
+        modifyTime: Date
     }
+}
+
+
+export interface DeleteCaseInfoDto {
+    condition: Prisma.at_case_infoWhereUniqueInput
 }

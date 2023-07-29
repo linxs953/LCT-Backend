@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client"
+
 interface CommonFields {
     status: number
     isSuccess: boolean
@@ -103,5 +105,16 @@ export interface ApiRunVO extends CommonFields{
 
 export interface FindTaskMetaDataVO {
     data: {}
+    error: Error
+}
+
+
+export interface CreateTaskRunRecordVO {
+    data: Prisma.at_task_run_logCreateInput
+    error: Error
+}
+
+export interface FindTaskRunRecordVO {
+    data: Prisma.at_task_run_logCreateInput
     error: Error
 }

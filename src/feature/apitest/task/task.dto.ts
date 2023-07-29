@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client"
 
 // 创建任务的body参数
 export interface TaskInfoDto {
@@ -36,4 +37,24 @@ export interface TaskRelationUpdataDto {
     taskType: string
     moduleIdList?: Array<string>
     sceneIdList?: Array<string>
+}
+
+// 创建任务运行记录的参数
+export interface TaskRunRecordCreateDto {
+    relation: Prisma.at_task_model_relationCreateInput
+    taskName: string
+    logId: string
+    allCaseNum: number
+    execFinishedNum: number
+    execSuccessNum: number
+    exec_FailedNum: number
+}
+
+export interface TaskRunRecordUpdateDto {
+    runId: string
+    runResult: Object
+    scenName: string
+    finishedCount: number
+    successCount: number
+    failedCount: number
 }

@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client"
+
 export interface CaseVO {
     case_no: number,
     case_id: string,
@@ -14,6 +16,12 @@ export interface CaseVO {
     extract_spec: string,
     expect: string,
     api_config: string,
+}
+
+
+export interface CreateCaseVo {
+    data: Prisma.at_case_infoCreateInput
+    error: Error
 }
 
 

@@ -1,6 +1,6 @@
 
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { PostgresModule } from 'src/feature/common/prisma/prisma.module';
+import { PostgresModule } from 'src/common/prisma/prisma.module';
 import { UIWidgetController } from './widget.controller';
 import { UIWidgetService } from './widget.service';
 import { LoggerMiddleware } from 'src/middleware/logger.middleware';

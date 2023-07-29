@@ -1,5 +1,5 @@
 
-
+// todo: 列举所有接口，保证都能走middleware
 let ROUTE_CONFIG = {
     "/apitest/taskService/getResult": {
         "query": ["runId"],

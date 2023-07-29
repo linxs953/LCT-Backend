@@ -1,6 +1,6 @@
 import { Logger } from "@nestjs/common";
 import { Injectable, Redirect } from "@nestjs/common/decorators";
-import { PostgresService } from "src/feature/common/prisma/prisma.service";
+import { PostgresService } from "src/common/prisma/prisma.service";
 import { CaseReferService } from "./scene-case-relation.service";
 import { SceneDataService } from "./scene-data.service";
 import { Prisma } from "@prisma/client";

@@ -1,7 +1,9 @@
 import { HttpStatus, Injectable, Logger, NestMiddleware } from "@nestjs/common";
 import { Request, Response, NextFunction } from 'express';
 import ROUTE_CONFIG from "src/config/interface";
-import { verifyQuery,verifyBody } from "src/utils/middleware/middleware";
+// import { verifyQuery,verifyBody } from "src/utils/middleware/middleware";
+import { verifyQuery,verifyBody } from "src/middleware/middleware.util";
+
 
 @Injectable()
 export class DtoVerifyMiddleware implements NestMiddleware {

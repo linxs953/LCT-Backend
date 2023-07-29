@@ -1,5 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
-import { PostgresService } from 'src/feature/common/prisma/prisma.service';
+import { PostgresService } from 'src/common/prisma/prisma.service';
 import { ExecutorModule } from '../executor/executor.module';
 import { ExecutorService } from '../executor/executor.service';
 import { FeatMKModule } from '../featMK/featMK.module';

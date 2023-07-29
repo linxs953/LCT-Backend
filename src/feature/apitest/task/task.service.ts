@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { PostgresService } from "src/feature/common/prisma/prisma.service";
+import { PostgresService } from "src/common/prisma/prisma.service";
 import { CollectionRunDto } from "../executor/executor.dto";
 import { ExecutorService } from "../executor/executor.service";
 import { FeatMKService } from "../featMK/featMK.service";
@@ -104,16 +104,27 @@ export class TaskService {
             }
         }
 
-
-        this.taskServiceLogger.error(`all scene count ${caseCount}`,"")
+        this.taskServiceLogger.debug(`all scene count ${caseCount}`)
 
         // 创建任务运行记录
-        const detailInfo = await this.runResultService.createTaskRunRecord(taskRelation,taskInfo.task_name,logId,caseCount)
+        let  detailInfo = await this.runResultService.createTaskRunRecord({
+            relation: taskRelation,
+            taskName:taskInfo.task_name,
+            logId: logId.toString(),
+            allCaseNum: caseCount,
+            execFinishedNum: 0,
+            execSuccessNum: 0,
+            exec_FailedNum: 0
+        })
+        if (detailInfo.error) {
+            this.taskServiceLogger.error(`create task run record faield`,detailInfo.error)
+            throw detailInfo.error
+        }
         
         // 遍历任务下面的所有场景，封装成promise执行
         for (let module of Object.keys(taskMeta)) {
             if(taskMeta.data[module] && taskMeta.data[module].length == 0) {
-                this.taskServiceLogger.error(`module [${module}] not config scene`,"")
+                this.taskServiceLogger.error(`module [${module}] not config scene, skip module [${module}]`,"")
                 continue
             }
 
@@ -150,7 +161,14 @@ export class TaskService {
                         const caseExecSuccessCount = allCaseCount - caseExecFailedCount
 
                         // 拿执行结果更新record
-                        this.runResultService.updateTaskRunRecord(detailInfo.log_id,taskRunRes,scene, allCaseCount ,caseExecSuccessCount,caseExecFailedCount).then(rr => {
+                        this.runResultService.updateTaskRunRecord({
+                            runId: detailInfo.data.log_id,
+                            runResult: taskRunRes,
+                            scenName: scene,
+                            finishedCount: allCaseCount,
+                            successCount: caseExecSuccessCount,
+                            failedCount: caseExecFailedCount
+                        }).then(rr => {
                             // 根据任务运行状态，打印不同内容
                             if (taskRunRes.status == 0){
                                 this.taskServiceLogger.log(`run scene [${scene}] successfully`)
@@ -165,7 +183,14 @@ export class TaskService {
 
                         // 运行collection抛了异常，不更新数量，这段大概率不会执行到
                         // 直接调用的collectionRun方法，方法并没有抛出异常，promise.catch不会执行
-                        this.runResultService.updateTaskRunRecord(detailInfo.log_id, err,scene).then(rr => {
+                        this.runResultService.updateTaskRunRecord({
+                            runId: detailInfo.data.log_id,
+                            runResult: err,
+                            scenName: scene,
+                            finishedCount: 0,
+                            successCount: 0,
+                            failedCount: 0
+                        }).then(rr => {
                             reject(err)
                         }).catch(updateErr => {
                             reject(updateErr)
@@ -214,16 +239,20 @@ export class TaskService {
         return result
     }
 
-    // 根据detailId获取任务运行记录
-    // todo: 要改task report service的返回值结构
+    // // 根据detailId获取任务运行记录
+    // // todo: 要改task report service的返回值结构
     async getStatus(runId:String) {
-        try {
-            const res = await this.runResultService.getTaskRunRecord(runId)
-            return res
-        } catch(err) {
-            this.taskServiceLogger.error(err.message, "")
-            return null
-        }
+        // try {
+        //     const res = await this.runResultService.getTaskRunRecord(runId)
+        //     if (res.error) {
+                
+        //     }
+        //     return res
+        // } catch(err) {
+        //     this.taskServiceLogger.error(err.message, "")
+        //     return null
+        // }
+        return this.runResultService.getTaskRunRecord(runId)
     }
 
     async createTaskInfo(taskInfo:Prisma.at_task_infoCreateInput) {
