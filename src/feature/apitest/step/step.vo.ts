@@ -19,13 +19,7 @@ export interface CaseVO {
 }
 
 
-export interface CreateCaseVo {
-    data: Prisma.at_case_infoCreateInput
+export interface StepServiceVO {
     error: Error
-}
-
-
-export interface FindCaseRecordVO {
-    data: CaseVO
-    error: Error
+    data: Prisma.at_case_infoCreateInput | CaseVO | {}
 }

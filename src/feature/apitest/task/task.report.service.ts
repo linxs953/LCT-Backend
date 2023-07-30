@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PostgresService } from "src/common/prisma/prisma.service";
 import { TaskRunRecordCreateDto, TaskRunRecordUpdateDto } from "./task.dto";
-import { CreateTaskRunRecordVO, FindTaskRunRecordVO } from "./task.vo";
+import { TaskServiceDataListVO, TaskServiceVO } from "./task.vo";
 var sd = require('silly-datetime');
 
 
@@ -21,7 +21,7 @@ export class TaskRunResultService {
     //                             execFinishedNum:number=0,execSuccessNum:number=0,
     //                             exec_FailedNum:number=0) {
     async createTaskRunRecord(runRecord:TaskRunRecordCreateDto) {
-        let result:CreateTaskRunRecordVO = {
+        let result:TaskServiceVO = {
             data: null,
             error: null
         }
@@ -156,7 +156,7 @@ export class TaskRunResultService {
     }
 
     async getTaskRunRecord(runId:String) {
-        let result:FindTaskRunRecordVO = {
+        let result:TaskServiceVO = {
             data: null,
             error: null
         }

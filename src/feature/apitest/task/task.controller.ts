@@ -116,7 +116,7 @@ export class TaskController {
         taskRunResultVO['status'] = HttpStatus.OK
         taskRunResultVO['data'] = {
             taskRunInfo: {
-                taskId: status_.data.task_id,
+                taskId: (<Prisma.at_task_run_logCreateInput>status_.data).task_id,
                 taskRunId: detailId,
                 taskStatus: status_['status'],
                 taskRunName: status_['task_run_name'],
@@ -161,7 +161,7 @@ export class TaskController {
             }
 
             // todo: 后期taskService.runTask调整之后需要进行异常错误处理，并去除try catch
-            const taskPromiseList = await this.taskService.runTask(query.taskId,logId,taskRelation.data,taskInfo.data)
+            const taskPromiseList = await this.taskService.runTask(query.taskId,logId,(<Prisma.at_task_model_relationCreateInput>taskRelation.data),(<Prisma.at_task_infoCreateInput>taskInfo.data))
             Promise.all(taskPromiseList).catch(err => {
                 this.taskLogger.error("run promise scene error","")
                 this.taskLogger.error(JSON.stringify(err),"")
@@ -216,7 +216,7 @@ export class TaskController {
         createTaskVO['isSuccess'] = true
         createTaskVO['message'] = "create task successfully"
         createTaskVO['data'] = {
-            task_id: res.data.task_id
+            task_id: (<Prisma.at_task_infoCreateInput>res.data).task_id
         }
         _res.status(HttpStatus.OK).send(createTaskVO)
         return
@@ -504,6 +504,7 @@ export class TaskController {
             }
             let records = []
             for (let d of res.data) {
+                d = (<Prisma.at_task_model_relationCreateInput>d)
                 let record:TaskRelationRecord = {
                     taskId: d.task_id,
                     taskType: d.task_type,
@@ -524,8 +525,9 @@ export class TaskController {
                     _res.status(HttpStatus.BAD_REQUEST).send(taskRelationVO)
                     return 
                 }
-                d.task_type === "1"?record['moduleId'] = d.module_id:record['sceneId'] = d.scene_id
-                d.task_type === "1"?record['moduleName'] = moduleInfo.data.module_name:record['sceneName'] = sceneInfo.data.scene_name
+                d.task_type === "1"?
+                record['moduleId'] = d.module_id:record['sceneId'] = d.scene_id;
+                d.task_type === "1"?record['moduleName'] = (<Prisma.at_module_infoCreateInput>moduleInfo.data).module_name:record['sceneName'] = (<Prisma.at_scene_infoCreateInput>sceneInfo.data).scene_name
                 records.push(record)
             }
             taskRelationVO['data'] = records

@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { PostgresService } from "src/common/prisma/prisma.service";
 import { SceneService } from "../scene/scene.service";
 import { Prisma } from "@prisma/client";
-import { FindModuleInfoRecordVO, FindModuleInfoRecordsVO } from "./featMK.vo";
+import { FeatMKServiceVO, FeatMkServiceDataListVO } from "./featMK.vo";
 
 @Injectable()
 export class FeatMKService {
@@ -16,7 +16,7 @@ export class FeatMKService {
 
 
     async findMany(moduleList:Array<String>) {
-        let result:FindModuleInfoRecordsVO = {
+        let result:FeatMKServiceVO = {
             data: null,
             error: null
         }
@@ -50,7 +50,7 @@ export class FeatMKService {
 
 
     async findById(moduleId:string) {
-        let result:FindModuleInfoRecordVO = {
+        let result:FeatMKServiceVO = {
             data: null,
             error: null
         }

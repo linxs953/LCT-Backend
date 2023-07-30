@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PostgresService } from "src/common/prisma/prisma.service";
 import { StepService } from "../step/step.service";
+import { SceneServiceVO } from "./scene.vo";
 
 @Injectable()
 export class CaseReferService {
@@ -15,7 +16,7 @@ export class CaseReferService {
     // 组装数据返回场景对应的case数据
     async findSceneCase(sceneId:String) {
 
-        let result = {
+        let result:SceneServiceVO = {
             data: null,
             error: null
         }

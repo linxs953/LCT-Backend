@@ -47,21 +47,15 @@ export interface FindTaskRelationVO extends CommonFields {
     data: Array<TaskRelationRecord>
 }
 
-
-
-
 // 获取任务配置的场景的返回值结构
 export interface FindAllSceneOfTaskVO extends CommonFields {
     data: {}
 }
 
-
-
 // 任务运行接口的返回值结构
 export interface StartTaskVO extends CommonFields {
     logId?: string
 }
-
 
 interface TaskRunSceneDetail {
     sceneName: string
@@ -92,7 +86,6 @@ interface TaskRunInfo {
     createTime: string | Date
 }
 
-
 // 获取任务执行结果接口的返回值结构
 export interface ApiRunVO extends CommonFields{
     data: {
@@ -103,18 +96,20 @@ export interface ApiRunVO extends CommonFields{
 }
 
 
-export interface FindTaskMetaDataVO {
-    data: {}
+
+/*
+    service 通用返回对象    
+*/
+
+
+// task.service通用返回对象
+export interface TaskServiceVO {
     error: Error
+    data?: Prisma.at_task_infoCreateInput | Prisma.at_task_model_relationCreateInput | Prisma.at_task_run_logCreateInput | {}
 }
 
-
-export interface CreateTaskRunRecordVO {
-    data: Prisma.at_task_run_logCreateInput
+// task.service查询多条数据的通用返回对象
+export interface TaskServiceDataListVO {
     error: Error
-}
-
-export interface FindTaskRunRecordVO {
-    data: Prisma.at_task_run_logCreateInput
-    error: Error
+    data: Array<Prisma.at_task_infoCreateInput | Prisma.at_task_model_relationCreateInput | Prisma.at_task_run_logCreateInput>
 }

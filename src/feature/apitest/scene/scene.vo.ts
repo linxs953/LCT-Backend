@@ -1,22 +1,15 @@
 import { Prisma } from "@prisma/client";
 
-export interface FindSceneRecordVO {
-    data: Prisma.at_scene_infoCreateInput
+/*
+    scene.service 通用返回结构
+*/
+
+export interface SceneServiceVO {
     error: Error
+    data: Prisma.at_scene_infoCreateInput | Prisma.at_scene_case_relationCreateInput | Prisma.at_scene_dataCreateInput | {}
 }
 
-export interface FindSceneRecordsVO {
-    data: Array<Prisma.at_scene_infoCreateInput>
+export interface SceneServiceDataListVO {
     error: Error
-}
-
-export interface FindSceneAllCaseVO {
-    data: {}
-    error: Error
-}
-
-
-export interface FindSceneDataRecordVO {
-    data: Array<Prisma.at_scene_dataCreateInput>,
-    error: Error
+    data: Array<Prisma.at_scene_infoCreateInput | Prisma.at_scene_case_relationCreateInput | Prisma.at_scene_dataCreateInput | {}>
 }

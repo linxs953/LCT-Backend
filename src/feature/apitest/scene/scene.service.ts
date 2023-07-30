@@ -4,7 +4,7 @@ import { PostgresService } from "src/common/prisma/prisma.service";
 import { CaseReferService } from "./scene-case-relation.service";
 import { SceneDataService } from "./scene-data.service";
 import { Prisma } from "@prisma/client";
-import { FindSceneAllCaseVO, FindSceneRecordVO, FindSceneRecordsVO } from "./scene.vo";
+import { SceneServiceVO, SceneServiceDataListVO } from "./scene.vo";
 
 
 @Injectable()
@@ -20,7 +20,7 @@ export class SceneService {
 
     async findById(sceneId:string) {
         
-        let result:FindSceneRecordVO = {
+        let result:SceneServiceVO = {
             data: null,
             error: null
         }
@@ -69,7 +69,7 @@ export class SceneService {
     }
 
     async findSceneByModuleId(moduleId:String) {
-        let result:FindSceneRecordsVO = {
+        let result:SceneServiceDataListVO = {
             data: null,
             error: null
         }
@@ -89,7 +89,7 @@ export class SceneService {
     }
 
     async findMany(moduleId:String) {
-        let result:FindSceneAllCaseVO = {
+        let result:SceneServiceVO = {
             data: null,
             error: null
         }
@@ -102,17 +102,18 @@ export class SceneService {
                 return result
             }
             for (let sceneId of sceneIdList.data) {
-                const caseInfoList = await this.caseReferService.findSceneCase(sceneId.scene_id)
+                let sceneIdExpect = (<Prisma.at_scene_infoCreateInput>sceneId)
+                const caseInfoList = await this.caseReferService.findSceneCase(sceneIdExpect.scene_id)
                 if (caseInfoList.error) {
                     this.sceneServiceLogger.error(`fetch caselist of scene failed.`,"")
                     result.error = caseInfoList.error
                     return result
                 }
                 if (result.data) {
-                    result.data[sceneId.scene_name] = caseInfoList.data
+                    result.data[sceneIdExpect.scene_name] = caseInfoList.data
                 } else {
                     result.data = {
-                        [sceneId.scene_name]: caseInfoList.data
+                        [sceneIdExpect.scene_name]: caseInfoList.data
                     }
                 }
             }

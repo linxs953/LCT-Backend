@@ -1,7 +1,7 @@
 import { Body, Injectable, Logger, Post } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PostgresService } from "src/common/prisma/prisma.service";
-import {CaseVO, CreateCaseVo, FindCaseRecordVO} from "./step.vo"
+import {CaseVO, StepServiceVO} from "./step.vo"
 import { CreateStepDto, DeleteCaseInfoDto, updateCaseInfoDto } from "./step.dto";
 const random = require('string-random')
 
@@ -16,7 +16,7 @@ export class StepService {
     }
 
     async findByCaseId(caseId:String) {
-        let result:FindCaseRecordVO = {
+        let result:StepServiceVO = {
             data: null,
             error: null
         }
@@ -53,7 +53,7 @@ export class StepService {
     }
 
     async createCase(createCaseDto:CreateStepDto) {
-        let result:CreateCaseVo = {
+        let result:StepServiceVO = {
             data: null,
             error: null
         }

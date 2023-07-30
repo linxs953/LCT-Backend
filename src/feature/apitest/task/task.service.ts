@@ -7,7 +7,7 @@ import { SceneService } from "../scene/scene.service";
 import { TaskRunResultService } from "./task.report.service";
 import { Prisma } from "@prisma/client";
 import { CaseStatics, SceneDataTrans } from "./task.utils";
-import { FindTaskMetaDataVO } from "./task.vo";
+import { TaskServiceVO, TaskServiceDataListVO } from "./task.vo";
 const random = require("string-random")
 var sd = require('silly-datetime');
 
@@ -29,9 +29,8 @@ export class TaskService {
         根据taskid获取任务信息，对findTask方法的封装
     */
     async findTaskRelationByTaskId(taskId:string) {
-        let dataRecord:Prisma.at_task_model_relationCreateInput
-        let result = {
-            data: dataRecord,
+        let result:TaskServiceVO = {
+            data: null,
             error: null
         }
         try {
@@ -56,7 +55,7 @@ export class TaskService {
         获取任务信息，对findTaskInfo的封装
     */
     async findTaskInfoByTaskId(taskId:string) {
-        let result = {
+        let result:TaskServiceVO = {
             data: null,
             error: null
         }
@@ -162,7 +161,7 @@ export class TaskService {
 
                         // 拿执行结果更新record
                         this.runResultService.updateTaskRunRecord({
-                            runId: detailInfo.data.log_id,
+                            runId: (<Prisma.at_task_run_logCreateInput>detailInfo.data).log_id,
                             runResult: taskRunRes,
                             scenName: scene,
                             finishedCount: allCaseCount,
@@ -184,7 +183,7 @@ export class TaskService {
                         // 运行collection抛了异常，不更新数量，这段大概率不会执行到
                         // 直接调用的collectionRun方法，方法并没有抛出异常，promise.catch不会执行
                         this.runResultService.updateTaskRunRecord({
-                            runId: detailInfo.data.log_id,
+                            runId: (<Prisma.at_task_run_logCreateInput>detailInfo.data).log_id,
                             runResult: err,
                             scenName: scene,
                             finishedCount: 0,
@@ -207,7 +206,7 @@ export class TaskService {
         获取多个 【任务关联模块】数据
     */
     async findMany(taskId:String) {
-        let result:FindTaskMetaDataVO = {
+        let result:TaskServiceVO = {
             data: null,
             error: null
         }
@@ -239,24 +238,12 @@ export class TaskService {
         return result
     }
 
-    // // 根据detailId获取任务运行记录
-    // // todo: 要改task report service的返回值结构
     async getStatus(runId:String) {
-        // try {
-        //     const res = await this.runResultService.getTaskRunRecord(runId)
-        //     if (res.error) {
-                
-        //     }
-        //     return res
-        // } catch(err) {
-        //     this.taskServiceLogger.error(err.message, "")
-        //     return null
-        // }
         return this.runResultService.getTaskRunRecord(runId)
     }
 
     async createTaskInfo(taskInfo:Prisma.at_task_infoCreateInput) {
-        let result = {
+        let result:TaskServiceVO = {
             data: null,
             error: null
         }
@@ -284,7 +271,7 @@ export class TaskService {
     }
 
     async updateTaskInfo(condition:Prisma.at_task_infoWhereUniqueInput, updatedData:Prisma.at_task_infoUpdateInput) {
-        let result = {
+        let result:TaskServiceVO = {
             data: null,
             error: null
         }
@@ -301,8 +288,7 @@ export class TaskService {
     }
 
     async deleteTaskInfo(task_id:string) {
-        let result = {
-            data: null,
+        let result:TaskServiceVO = {
             error: null
         }
         try {
@@ -338,7 +324,7 @@ export class TaskService {
 
 
     async createTaskRelation(relation:Prisma.at_task_model_relationCreateInput) {
-        let result = {
+        let result:TaskServiceVO = {
             data: null,
             error: null
         }
@@ -353,7 +339,7 @@ export class TaskService {
             }
             
             // 如果存在任务关联记录，判断是否模块已关联
-            if (taskRelationInfo && taskRelationInfo.data.module_id === module_id) {
+            if (taskRelationInfo && (<Prisma.at_task_model_relationCreateInput>taskRelationInfo.data).module_id === module_id) {
                 this.taskServiceLogger.error(`task id ${task_id} relation exist module_id ${module_id},create failed`,"")
                 result.error = new Error("task_id relation exist module_id")
                 return result
@@ -382,7 +368,7 @@ export class TaskService {
     }
 
     async updateTaskRelation(condition:Prisma.at_task_model_relationWhereUniqueInput, data:Prisma.at_task_model_relationUpdateInput) {
-        let result = {
+        let result:TaskServiceVO = {
             data: null,
             error: null
         }
@@ -401,7 +387,7 @@ export class TaskService {
     }
 
     async removeTaskRelation(task_id:string) {
-        let result = {
+        let result:TaskServiceVO = {
             data: null,
             error: null
         }
@@ -421,9 +407,8 @@ export class TaskService {
     }
 
     async findRelation(task_id?: string) {
-        let dataRecord:Array<Prisma.at_task_model_relationCreateInput>
-        let result = {
-            data: dataRecord,
+        let result:TaskServiceDataListVO = {
+            data: null,
             error: null
         }
         try {
