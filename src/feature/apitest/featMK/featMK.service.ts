@@ -67,4 +67,61 @@ export class FeatMKService {
             return result
         }        
     }
+
+
+    async createModule(moduleInfo:Prisma.at_module_infoCreateInput) {
+        let result:FeatMKServiceVO = {
+            data: null,
+            error: null
+        }
+        try {
+            if (moduleInfo.module_id || moduleInfo.module_name || moduleInfo.business_name) {
+                result.error = new Error(`moduleInfo data is invalid [${JSON.stringify(moduleInfo)}]`)
+                return result
+            }
+            await this.pgService.at_module_info.create({
+                data: moduleInfo
+            })
+            return result
+        } catch(err) {
+            this.mkServiceLogger.error(`create module failed with data ----- ${JSON.stringify(moduleInfo)}`,err)
+            result.error = err
+            return result
+        }
+    }
+
+    async updateModule(condition:Prisma.at_module_infoWhereUniqueInput ,updateInfo:Prisma.at_module_infoCreateInput) {
+        let result:FeatMKServiceVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_module_info.update({
+                data: updateInfo,
+                where: condition
+            })
+        } catch(err) {
+            this.mkServiceLogger.error(`update module failed with [moduleId=${updateInfo.module_id}]`,err)
+            result.error = err
+        }
+        return result
+    }
+
+    async deleteModule(moduleId:string) {
+        let result:FeatMKServiceVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_module_info.delete({
+                where: {
+                    module_id: moduleId
+                }
+            })
+        } catch(err) {
+            this.mkServiceLogger.error(`delete module info with [moduleId=${moduleId}] failed`)
+            result.error = err
+        }
+        return result
+    }
 }
