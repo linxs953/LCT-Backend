@@ -18,6 +18,7 @@ export class SceneService {
             this.sceneServiceLogger = new Logger(SceneService.name)
     }
 
+    // 根据id获取场景信息
     async findById(sceneId:string) {
         
         let result:SceneServiceVO = {
@@ -36,13 +37,9 @@ export class SceneService {
             result.error = err
         }
         return result
-        // return this.pgService.at_scene_info.findFirst({
-        //     where: {
-        //         scene_id: sceneId
-        //     }
-        // })
     }
 
+    // 根据场景名称获取场景的输入数据，用以做数据驱动
     async findSceneDataByName(sceneName:String) {
         let result = {
             data: null,
@@ -68,6 +65,8 @@ export class SceneService {
         return result
     }
 
+
+    // 根据id获取多个场景   
     async findSceneByModuleId(moduleId:String) {
         let result:SceneServiceDataListVO = {
             data: null,
@@ -88,6 +87,7 @@ export class SceneService {
         return result
     }
 
+    // 根据moduleId获取所有的场景用例数据，data是{}格式
     async findMany(moduleId:String) {
         let result:SceneServiceVO = {
             data: null,
@@ -122,4 +122,35 @@ export class SceneService {
         }
         return result
     }
+
+
+    //  at_scene_info
+    async createSceneInfo() {}
+
+    async updateSceneInfo() {}
+
+    async deleteSceneInfo() {}
+
+    async findAllScene() {}
+
+
+    // at_scene_data
+    async updateSceneData() {}
+
+    async deleteSceneData() {}
+
+    async importSceneData() {}
+
+    async createSceneData() {}
+
+    // at_scene_case_relation
+    async createSceneRelation() {}
+
+    async updateSceneRelation() {}
+
+    async deleteSceneRelation() {}
+
+    async findSceneRelation() {}
+
+    
 }
