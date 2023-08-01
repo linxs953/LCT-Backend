@@ -24,6 +24,10 @@ let ROUTE_CONFIG = {
     "/uitest/widgetService/getAllWidgets": {
         "query": [],
         "body": []
+    },
+    "/apitest/mkService/create": {
+        "query": [],
+        "body": ["moduleName","businessBelong","ownerName"]
     }
 }
 

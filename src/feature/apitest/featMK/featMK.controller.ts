@@ -1,7 +1,13 @@
-import { Controller,Logger } from "@nestjs/common";
+import { Body, Controller,Delete,Get,HttpStatus,Logger, Post, Query, Res } from "@nestjs/common";
 import {FeatMKService } from "./featMK.service";
 import { APITEST_CONFIG } from "../apitest.config";
 import { SceneService } from "../scene/scene.service";
+import { UpdateModuleDto, CreateModuleDto, DeleteModuleParamDto, FindModuleParamDto } from "./featMK.dto";
+import { CreateModudleVO, DeleteModuleVO, FindModuleInfoVO, FindModuleListVO, UpdateModuleVO } from "./featMK.vo";
+import { Prisma } from "@prisma/client";
+const random = require("string-random")
+var sd = require('silly-datetime');
+
 
 @Controller(`${APITEST_CONFIG.routePrefix}/mkService`)
 export class FeatMKController {
@@ -13,84 +19,187 @@ export class FeatMKController {
         this.mkLogger = new Logger(FeatMKController.name)
     }    
 
-    // @HttpCode(200)
-    // @Post("add")
-    // async createModule(@Body() moduleInfo:MKDto, @Res() _resp) {
-    //     this.mkLogger.error(moduleInfo)
-    //     var moduleData:Prisma.module_infoCreateInput = {
-    //         module_id: "DSMODULE" + random(10),
-    //         module_name: moduleInfo.moduleName.toString(),
-    //         scene_list: JSON.stringify(moduleInfo.relatedScene),
-    //         business_name: moduleInfo.businessName.toString(),
-    //         module_owner: moduleInfo.businessOwner.toString(),
-    //         create_time: new Date(),
-    //         update_time: new Date(),
-    //         create_person: "default-user",
-    //         update_person: "default-user"
-    //     }
-    //     this.mkService.create(moduleData).then(res => {
-    //         this.mkLogger.debug("create module successfully")
-    //         this.mkLogger.debug(`module record:\n${JSON.stringify(res)}`)
-    //         _resp.status(HttpStatus.OK).send({
-    //             status: HttpStatus.OK,
-    //             error: null,
-    //             data: res
-    //         })
-    //     }).catch(err =>{
-    //         this.mkLogger.error("create module failed")
-    //         this.mkLogger.error(`error message:\n${err}`)
-    //         _resp.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-    //             status: HttpStatus.INTERNAL_SERVER_ERROR,
-    //             error: err.message,
-    //             data: null
-    //         })
-    //     }) 
-    // }
+    @Post("create")
+    async createModule(@Body() newModuleDto:CreateModuleDto, @Res() _res) {
+        let createVO:CreateModudleVO = {
+            data: {
+                moduleId: "",
+                moduleName: "",
+                createTime: undefined,
+                createUser: ""
+            },
+            status: 0,
+            message: "",
+            isSuccess: true
+        }
+        const moduleInfo = await this.mkService.createModule({
+            module_id: random(20),
+            module_name: newModuleDto.moduleName,
+            business_name: newModuleDto.businessBelong,
+            module_owner: newModuleDto.ownerName,
+            create_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm'),
+            modify_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm'),
+            create_person: "admin",
+            modify_person: "admin"
+        })
+        const moduleInfoData = (<Prisma.at_module_infoCreateInput>moduleInfo.data)
+
+        if (moduleInfo.error) {
+            createVO['isSuccess'] = false
+            createVO['message'] = moduleInfo.error.message
+            createVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            createVO['data'] = null
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(createVO)
+            return
+        }
+        createVO['isSuccess'] = true
+        createVO['message'] = "create module successfully"
+        createVO['data'] = {
+            moduleId: moduleInfoData.module_id,
+            moduleName: moduleInfoData.module_name,
+            createTime: moduleInfoData.create_time,
+            createUser: moduleInfoData.create_person
+        }
+        _res.status(HttpStatus.OK).send(createVO)
+        return
+        
+    }
+
+    @Post("update")
+    async updateModule(@Body() updateModuleDto:UpdateModuleDto, @Res() _res) {
+        const res = await this.mkService.findById(updateModuleDto.moduleId)
+        let updateVO:UpdateModuleVO = {
+            data: {
+                moduleId: "",
+                moduleName: "",
+                createTime: "",
+                createUser: ""
+            },
+            status: 0,
+            message: "",
+            isSuccess: false
+        }
+        try {
+            if (res.data) {
+                const data = (<Prisma.at_module_infoCreateInput>res.data)
+                updateModuleDto.moduleName?updateModuleDto:updateModuleDto.moduleName=data.module_name
+                updateModuleDto.businessBelong?updateModuleDto:updateModuleDto.businessBelong=data.business_name
+                updateModuleDto.ownerName?updateModuleDto:updateModuleDto.ownerName=data.module_owner
+            }
+    
+            const updateMkInfo = await this.mkService.updateModule(
+                {
+                    module_id: updateModuleDto.moduleId
+                },
+                {
+                    module_name: updateModuleDto.moduleName,
+                    module_id: updateModuleDto.moduleId,
+                    business_name: updateModuleDto.businessBelong,
+                    module_owner: updateModuleDto.ownerName,
+                    create_time: res.data['create_time'],
+                    modify_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm'),
+                    create_person: "admin",
+                    modify_person: "admin"
+                }
+            )
+            if (updateMkInfo.error) {
+                updateVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+                updateVO['isSuccess'] = false
+                updateVO['message'] = updateMkInfo.error.message
+                updateVO['data'] = null
+                _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(updateVO)
+                return
+            }
+            _res.status(HttpStatus.OK).send(updateVO)
+            return
+
+        } catch(err) {
+            this.mkLogger.error(`update module with [condition=${JSON.stringify(updateModuleDto.moduleId)}] failed`,err)
+            updateVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            updateVO['isSuccess'] = false
+            updateVO['message'] = err.message
+            updateVO['data'] = null
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(updateVO)
+            return
+        }
+
+    }
+
+    @Delete("delete")
+    async deleteModule(@Query() query:DeleteModuleParamDto, @Res() _res) {
+        let deleteVO:DeleteModuleVO = {
+            status: 0,
+            message: "",
+            isSuccess: false
+        }
+        const deletModuleInfo = await this.mkService.deleteModule(query.moduleId)
+        if (deletModuleInfo.error) {
+            deleteVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            deleteVO['isSuccess'] = false
+            deleteVO['message'] = deletModuleInfo.error.message
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(deleteVO)
+            return
+        }
+        deleteVO['status'] = HttpStatus.OK
+        deleteVO['isSuccess'] = true
+        deleteVO['message'] = "delete module successfully"
+        _res.status(HttpStatus.OK).send(deleteVO)
+        return  
+    }
+
+    @Get("getInfo")
+    async findModule(@Query() query: FindModuleParamDto, @Res() _res) {
+        let findVO:FindModuleInfoVO = {
+            data: null,
+            status: 0,
+            message: "",
+            isSuccess: false
+        }
+
+        const findModuleInfo = await this.mkService.findById(query.moduleId)
+        if (findModuleInfo.error) {
+            findVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            findVO['isSuccess'] = false
+            findVO['message'] = findModuleInfo.error.message
+            findVO['message'] = null
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(findVO)
+            return
+        }
+        findVO['status'] = HttpStatus.OK
+        findVO['isSuccess'] = true
+        findVO['message'] = "fetch module info successfully"
+        findVO['data'] = {
+            moduleId: (<Prisma.at_module_infoCreateInput>findModuleInfo.data).module_id,
+            moduleName: (<Prisma.at_module_infoCreateInput>findModuleInfo.data).module_name,
+            createTime: (<Prisma.at_module_infoCreateInput>findModuleInfo.data).create_time,
+            createUser: (<Prisma.at_module_infoCreateInput>findModuleInfo.data).create_person
+        }
+        _res.status(HttpStatus.OK).send(findVO)
+    }
 
 
-    // @HttpCode(200)
-    // @Post("relatedScene")
-    // async setScene(@Body() updateData, @Res() _resp) {
-    //     try {
-    //         var findRs = await this.mkService.findModuleById(updateData.moduleId)
-    //         this.mkLogger.debug(`get module info by module_id ${updateData.moduleId} successfully\n${JSON.stringify(findRs)}`)
-    //         findRs['scene_list'] = JSON.stringify(updateData.sceneList)
-    //         findRs['update_time'] = new Date()
-    //         for (let s_id of updateData.sceneList) {
-    //             await this.sceneService.updateSceneBelongModule(s_id, updateData.moduleId)
-    //         }
-    //         this.mkService.updateModule(updateData.moduleId, findRs).then(res => {
-    //             this.mkLogger.debug(`setting module scene_list  successfully\nupdatedData: ${JSON.stringify(res)}`)
-    //             _resp.status(HttpStatus.OK).send({
-    //                 status: HttpStatus.OK,
-    //                 message: "related module successfully",
-    //                 data: res
-    //             })
-    //         }).catch(err => {
-    //             this.mkLogger.error(`update module failed. updateData: ${JSON.stringify(updateData)}\n${JSON.stringify(err)}`)
-    //             _resp.status(HttpStatus.OK).send({
-    //                 status: HttpStatus.OK,
-    //                 message: "related module successfully",
-    //                 data: null,
-    //                 error: err.message
-    //             })
-    //         })
-            
-    //     } catch(err) {
-    //         this.mkLogger.error(`setScene occur error. updateData: ${JSON.stringify(updateData)}\n${JSON.stringify(err)}`)
-    //         _resp.status(HttpStatus.OK).send({
-    //             status: HttpStatus.OK,
-    //             message: "related module successfully",
-    //             data: null,
-    //             error: err.message
-    //         })
-    //     }
-    //     this.mkService.findModuleById(updateData.moduleId).then(res => {
-    //         res['scene_list'] = JSON.stringify(updateData.sceneList)
-    //         res['update_time'] = new Date()
+    @Get("getAllModules")
+    async findAllModule(@Res() _res) {
+        const dataList = await this.mkService.findModuleList()
+        let findListVO:FindModuleListVO = {
+            status: 0,
+            message: "",
+            isSuccess: false,
+            data: [],
 
-    //     }).catch(err => {
-    //         this.mkLogger.error(err)
-    //     })
-    // }
+        }
+        if (dataList.error) {
+            findListVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            findListVO['isSuccess'] = false
+            findListVO['message'] = dataList.error.message
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(findListVO)
+            return
+        }
+        findListVO['data'] = dataList.data
+        findListVO['status'] = HttpStatus.OK
+        findListVO['isSuccess'] = true
+        findListVO['message'] = "fetch module info list successfully"
+        _res.status(HttpStatus.OK).send(findListVO)
+        return
+    }
 }

@@ -12,8 +12,11 @@ export class DtoVerifyMiddleware implements NestMiddleware {
         this.dtoVerifyLogger = new Logger(DtoVerifyMiddleware.name)
     }
 
-    verify(request:Request, queryList:Array<string>) {
+    verify(request:Request, routeConfig:{}) {
         // 验证url参数
+        const queryList = routeConfig['query']
+        const bodyList = routeConfig['body']
+
         let error = verifyQuery(request,queryList)
         if (error) {
             this.dtoVerifyLogger.error(error.stack, "")
@@ -26,7 +29,7 @@ export class DtoVerifyMiddleware implements NestMiddleware {
             const queryMap = request.query
             for (let q of Object(queryList)) {
                 if (queryMap[q] === "") {
-                    this.dtoVerifyLogger.error(`param [${q}] value null`, "")
+                    this.dtoVerifyLogger.error(`param [${q}] value null`,"")
                     return {
                         success: false,
                         message: `param [${q}] value null`,
@@ -37,7 +40,7 @@ export class DtoVerifyMiddleware implements NestMiddleware {
         }
 
         // 验证body参数
-        error = verifyBody(request, queryList)
+        error = verifyBody(request, bodyList)
         if (error) {
             this.dtoVerifyLogger.error(error.stack, "")
             return {
@@ -45,54 +48,27 @@ export class DtoVerifyMiddleware implements NestMiddleware {
                 "message": error.message,
                 "data": null
             }
+        } else {
+            const bodyMap = request.body
+            for (let q of Object(bodyList)) {
+                if (bodyMap[q] === "") {
+                    this.dtoVerifyLogger.error(`body param [${q}] value null`, "")
+                    return {
+                        success: false,
+                        message: `body param [${q}] value null`,
+                        data: null
+                    }
+                }
+            }
         }
         return
     }
 
     use(req: Request, res: Response, next: NextFunction) {
-        
-        switch (req.path) {
-            case "/apitest/taskService/getResult": {
-                const error = this.verify(req,ROUTE_CONFIG[req.path]['query'])
-                if (error) {
-                    res.status(HttpStatus.BAD_REQUEST).send(error)
-                    return
-                }
-                break
-            }
-            case "/apitest/taskService/start": {
-                 const error = this.verify(req,ROUTE_CONFIG[req.path]['query'])
-                 if (error) {
-                     res.status(HttpStatus.BAD_REQUEST).send(error)
-                     return
-                 }
-                 break
-            }
-            case "/apitest/taskService/getAllScene": {
-                const error = this.verify(req,ROUTE_CONFIG[req.path]['query'])
-                if (error) {
-                    res.status(HttpStatus.BAD_REQUEST).send(error)
-                    return
-                }
-                break
-            }
-            case "/uitest/widgetService/getWidgets": {
-                const error = this.verify(req,ROUTE_CONFIG[req.path]['query'])
-                if (error) {
-                    res.status(HttpStatus.BAD_REQUEST).send(error)
-                    return
-                }
-                break
-            }
-            case "/uitest/widgetService/getAllWidgets": {
-
-                const error = this.verify(req,ROUTE_CONFIG[req.path]['query'])
-                if (error) {
-                    res.status(HttpStatus.BAD_REQUEST).send(error)
-                    return
-                }
-                break
-            }
+        const queryVerifyErr = this.verify(req,ROUTE_CONFIG[req.path])
+        if (queryVerifyErr) {
+            res.status(HttpStatus.BAD_REQUEST).send(queryVerifyErr)
+            return
         }
         next()
     }

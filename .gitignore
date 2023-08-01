@@ -5,6 +5,8 @@ test/
 .env
 pla*
 
+.vscode/
+
 # Logs
 logs
 *.log

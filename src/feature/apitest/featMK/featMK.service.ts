@@ -14,7 +14,31 @@ export class FeatMKService {
             this.mkServiceLogger = new Logger(FeatMKService.name)
     }
 
+    // 获取所有的模块
+    async findModuleList() {
+        let result:FeatMkServiceDataListVO = {
+            data: [],
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_module_info.findMany({
+                where: {
+                    module_id: {not: ""},
+                    module_name: {not: ""},
+                    business_name: {not: ""},
+                    module_owner: {not: ""}
+                }
+            })
+            return result
+        } catch(err) {
+            this.mkServiceLogger.error(`fetch module list failed`, err)
+            result.error = err
+        }
+        return result
+    }
 
+
+    // 查找所有关联的场景
     async findMany(moduleList:Array<String>) {
         let result:FeatMKServiceVO = {
             data: null,
@@ -48,7 +72,7 @@ export class FeatMKService {
         return result
     }
 
-
+    // 通过id获取模块信息
     async findById(moduleId:string) {
         let result:FeatMKServiceVO = {
             data: null,
@@ -69,6 +93,7 @@ export class FeatMKService {
     }
 
 
+    // 创建模块
     async createModule(moduleInfo:Prisma.at_module_infoCreateInput) {
         let result:FeatMKServiceVO = {
             data: null,
@@ -76,6 +101,7 @@ export class FeatMKService {
         }
         try {
             if (moduleInfo.module_id || moduleInfo.module_name || moduleInfo.business_name) {
+                this.mkServiceLogger.error(`moduleInfo data is invalid [${JSON.stringify(moduleInfo)}]`,"")
                 result.error = new Error(`moduleInfo data is invalid [${JSON.stringify(moduleInfo)}]`)
                 return result
             }
@@ -90,6 +116,8 @@ export class FeatMKService {
         }
     }
 
+
+    // 更新模块
     async updateModule(condition:Prisma.at_module_infoWhereUniqueInput ,updateInfo:Prisma.at_module_infoCreateInput) {
         let result:FeatMKServiceVO = {
             data: null,
@@ -107,6 +135,8 @@ export class FeatMKService {
         return result
     }
 
+
+    // 删除模块
     async deleteModule(moduleId:string) {
         let result:FeatMKServiceVO = {
             data: null,

@@ -26,7 +26,15 @@ export function verifyQuery(req: Request, paramsList:Array<string>) {
 }
 
 
-export function verifyBody(req:Request, bodyList: Array<String>) {
+export function verifyBody(req:Request, bodyList: Array<string>) {
+    const body = req.body
+    const bodyKeys = Object(body)
+    const bodyStr = JSON.stringify(bodyKeys)
+    for (let idx=0;idx < bodyList.length;idx++) {
+        if (!bodyStr.includes(bodyList[idx])) {
+            return new Error(`param [${bodyList[idx]}] not specified`)
+        }
+    }
     return null
 }
 
