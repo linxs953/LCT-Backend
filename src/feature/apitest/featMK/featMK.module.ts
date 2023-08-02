@@ -15,11 +15,11 @@ import { DtoVerifyMiddleware } from 'src/middleware/dto_verify.middleware';
     providers: [FeatMKService, PostgresService, SceneService],
     exports: [FeatMKService]
   })
-  export class FeatMKModule {}
-  // export class FeatMKModule implements NestModule {
-  //   configure(consumer: MiddlewareConsumer) {
-  //     consumer.apply(LoggerMiddleware).forRoutes(FeatMKController)
-  //     consumer.apply(DtoVerifyMiddleware).forRoutes(FeatMKController)
+  // export class FeatMKModule {}
+  export class FeatMKModule implements NestModule {
+    configure(consumer: MiddlewareConsumer) {
+      consumer.apply(LoggerMiddleware).forRoutes(FeatMKController)
+      // consumer.apply(DtoVerifyMiddleware).forRoutes(FeatMKController)
   
-  //   }
-  // }
+    }
+  }

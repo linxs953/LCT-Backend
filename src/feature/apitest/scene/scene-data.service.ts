@@ -29,19 +29,11 @@ export class SceneDataService {
     }
 
 
-    async createSceneData() {
-        
-    }
+    async updateSceneData() {}
 
-    async updateSceneData() {
+    async deleteSceneData() {}
 
-    }
+    async importSceneData() {}
 
-    async deleteSceneData() {
-
-    }
-
-    async importSceneData(fileContent:string) {
-        
-    }
+    async createSceneData() {}
 }

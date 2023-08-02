@@ -87,7 +87,7 @@ export class SceneService {
         return result
     }
 
-    // 根据moduleId获取所有的场景用例数据，data是{}格式
+    // 根据moduleId获取所有的场景用例数据，给上层module调用，data是{}格式
     async findMany(moduleId:String) {
         let result:SceneServiceVO = {
             data: null,
@@ -125,32 +125,92 @@ export class SceneService {
 
 
     //  at_scene_info
-    async createSceneInfo() {}
+    async createSceneInfo(sceneInfo: Prisma.at_scene_infoCreateInput) {
+        let result:SceneServiceVO= {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_scene_info.create({
+                data: sceneInfo
+            })
 
-    async updateSceneInfo() {}
+        } catch(err) {
+            this.sceneServiceLogger.error(`fetch scene info from db occur error ${err.message}`,err.stack)
+            result.error = err
+            return result
+        }
+        return result
+    }
 
-    async deleteSceneInfo() {}
+    async updateSceneInfo(condition: Prisma.at_scene_infoWhereUniqueInput, updateData: Prisma.at_scene_infoUpdateInput) {
+        let result: SceneServiceVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_scene_info.update({
+                where: condition,
+                data: updateData
+            })
+        } catch(err) {
+            this.sceneServiceLogger.error(`update scene info occur error ${err.message}`,err.stack)
+            result.error = err
+        }
+        return result
+    }
 
-    async findAllScene() {}
+    async deleteSceneInfo(condition: Prisma.at_scene_infoWhereUniqueInput) {
+        let result:SceneServiceVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_scene_info.delete({
+                where: condition
+            })
+        } catch(err) {
+            this.sceneServiceLogger.error(``)
+            result.error = err
+        }
+        return result
+    }
 
+    async findSceneList() {
+        let result: SceneServiceDataListVO = {
+            error: null,
+            data: []
+        }
+        try {
+            result.data = await this.pgService.at_scene_info.findMany({
+                where: {
+                    scene_id: {not: ""},
+                    scene_name: {not: ""}
+                }
+            })
+            
+        } catch(err) {
+            this.sceneServiceLogger.error(`fetch all scene info occur error ${err.message}`,err.stack)
+            result.error = err
+        }
+        return result
+    }
 
-    // at_scene_data
-    async updateSceneData() {}
-
-    async deleteSceneData() {}
-
-    async importSceneData() {}
-
-    async createSceneData() {}
-
-    // at_scene_case_relation
-    async createSceneRelation() {}
-
-    async updateSceneRelation() {}
-
-    async deleteSceneRelation() {}
-
-    async findSceneRelation() {}
-
+    async findSceneInfoById(sceneId:string) {
+        let result: SceneServiceVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_scene_info.findFirst({
+                where: {
+                    scene_id: sceneId
+                }
+            })
+        } catch(err) {
+            result.error  = err
+        }
+        return result
+    }
     
 }

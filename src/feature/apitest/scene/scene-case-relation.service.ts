@@ -59,15 +59,13 @@ export class CaseReferService {
         return result
     }
 
-    //  删除场景<->用例的关联关系
-    async deleteRelatetionById(scenId:String) {
+    async createSceneRelation() {}
 
-    }
+    async updateSceneRelation() {}
 
-    // 更新场景<->用例的关联关系
-    async updateRelation() {
+    async deleteSceneRelation() {}
 
-    }
+    async findSceneRelation() {}
     
 
 }
