@@ -4,15 +4,16 @@ import { Prisma } from "@prisma/client";
 import { APITEST_CONFIG } from "../apitest.config";
 import { SceneService} from "./scene.service";
 import {Logger} from "@nestjs/common"
-import { CreateSceneInfoDto, DeleteSceneInfoParamDto, FindSceneInfoParamDto, UpdateSceneDto } from "./scene.dto";
-import { CreateSceneInfoVO, DeleteSceneInfoVO, FindSceneInfoListVO, FindSceneInfoVO, SceneServiceDataListVO, UpdateSceneInfoVO } from "./scene.vo";
+import { CreateRelationDto, CreateSceneInfoDto, DeleteRelationParamDto, DeleteSceneInfoParamDto, FindRelationParamDto, FindSceneInfoParamDto, UpdateSceneDto } from "./scene.dto";
+import { CreateSceneInfoVO, CreateSceneRelationVO, DeleteSceneInfoVO, DeleteSceneRelationVO, FindSceneInfoListVO, FindSceneInfoVO, FindSceneRelationVO, SceneServiceDataListVO, UpdateSceneInfoVO } from "./scene.vo";
+import { CaseReferService } from "./scene-case-relation.service";
 var sd = require('silly-datetime');
 
-// @Controller(`${APITEST_CONFIG.routePrefix}/sceneService`)
 @Controller(`${APITEST_CONFIG.routePrefix}/sceneService`)
 export class SceneController {
     private sceneLogger:Logger
-    constructor (private readonly sceneService:SceneService,) {
+    constructor (private readonly sceneService:SceneService,
+                 private readonly sceneRelationService:CaseReferService) {
             this.sceneLogger = new Logger(SceneController.name)
     }
     
@@ -174,15 +175,80 @@ export class SceneController {
 
 
     @Get("getSceneRelation")
-    async getSceneRelation() {}
+    async getSceneRelation(@Query() findRelationDto:FindRelationParamDto, @Res() _res) {
+        let findVO:FindSceneRelationVO = {
+            status: 0,
+            isSuccess: false,
+            message: "",
+            data: null
+        }
+        const sceneRelation = await this.sceneRelationService.findSceneRelation({
+            scene_id: findRelationDto.sceneId
+        })
+        if (sceneRelation.error) {
+            findVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            findVO['isSuccess'] = false
+            findVO['message'] = sceneRelation.error.message
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(findVO)
+            return
+        }
+        findVO['status'] = HttpStatus.OK
+        findVO['isSuccess'] = true
+        findVO['message'] = "fetch scene relation successfully"
+        findVO['data'] = <Prisma.at_scene_case_relationCreateInput>sceneRelation.data
+        _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(findVO)
+        return
+    }
 
     @Post("createRelation")
-    async createRelationWithSceneId() {}
+    async createRelationWithSceneId(@Body() relationDto:CreateRelationDto, @Res() _res) {
+        const createRs = await this.sceneRelationService.createSceneRelation(relationDto)
+        let createVo:CreateSceneRelationVO = {
+            status: 0,
+            isSuccess: false,
+            message: "",
+            data: null
+        }
+        if (createRs.error) {
+            createVo['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            createVo['isSuccess'] = false
+            createVo['message'] = createRs.error.message
+            createVo['data'] = null
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(createVo)
+            return
+        }
+        createVo['status'] = HttpStatus.OK
+        createVo['isSuccess'] = true
+        createVo['message'] = "create scene relation successfully"
+        createVo['data'] = <Prisma.at_scene_case_relationCreateInput>createRs.data
+        _res.status(HttpStatus.OK).send(createVo)
+        return
+
+    }
 
     @Post("updateRelation")
     async updateRelationWithSceneId() {}
 
 
     @Delete("removeRelation")
-    async deleteRelationWithSceneId() {}
+    async deleteRelationWithSceneId(@Query() findRelationDto:DeleteRelationParamDto, @Res() _res){
+        let deleteVO:DeleteSceneRelationVO = {
+            status: 0,
+            isSuccess: false,
+            message: ""
+        }
+        const deleteRelationRs = await this.sceneRelationService.deleteSceneRelation(<Prisma.at_scene_case_relationWhereInput>findRelationDto)
+        if (deleteRelationRs.error) {
+            deleteVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            deleteVO['isSuccess']  = false
+            deleteVO['message'] = deleteRelationRs.error.message
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(deleteVO)
+            return
+        }
+        deleteVO['status'] = HttpStatus.OK
+        deleteVO['isSuccess']  = true
+        deleteVO['message'] = "delete scene relation successfully"
+        _res.status(HttpStatus.OK).send(deleteVO)
+        return
+    }
 }

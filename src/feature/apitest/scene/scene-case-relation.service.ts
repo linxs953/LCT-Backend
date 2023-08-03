@@ -2,6 +2,10 @@ import { Injectable, Logger } from "@nestjs/common";
 import { PostgresService } from "src/common/prisma/prisma.service";
 import { StepService } from "../step/step.service";
 import { SceneServiceVO } from "./scene.vo";
+import { Prisma, at_scene_case_relation } from "@prisma/client";
+import { CreateRelationDto } from "./scene.dto";
+let random = require("string-random")
+let sd = require("silly-datetime")
 
 @Injectable()
 export class CaseReferService {
@@ -13,7 +17,7 @@ export class CaseReferService {
         this.caseReferLogger = new Logger(CaseReferService.name)
     }
 
-    // 组装数据返回场景对应的case数据
+    // 组装数据返回场景对应的case数据, result.data结构是{}
     async findSceneCase(sceneId:String) {
 
         let result:SceneServiceVO = {
@@ -59,13 +63,110 @@ export class CaseReferService {
         return result
     }
 
-    async createSceneRelation() {}
+    // 传入一个sceneId和一个caseId列表
+    async createSceneRelation(relationObject: CreateRelationDto) {
+        let result:SceneServiceVO = {
+            data: null,
+            error: null
+        }
+        let dd:Array<Prisma.at_scene_case_relationCreateInput> = []
+        try {
+            for (let caseIdx = 0;caseIdx < relationObject.caseIdList.length;caseIdx++){
 
-    async updateSceneRelation() {}
+                // 根据caseid获取用例信息
+                    const caseInfo = await this.stepService.findByCaseId(relationObject.caseIdList[caseIdx])
+                    if (caseInfo.error) {
+                        this.caseReferLogger.error(`fetch case info with [id=${relationObject.caseIdList[caseIdx]}] failed`,caseInfo.error.stack)
+                        result.error = caseInfo.error
+                        return result
+                    }
+                    const caseInfoExpect = <Prisma.at_case_infoCreateInput>caseInfo.data
 
-    async deleteSceneRelation() {}
+                    // 根据拿到的用例信息，组装关联表的数据
+                    const relationData:Prisma.at_scene_case_relationCreateInput = {
+                        id: random(10),
+                        scene_id: relationObject.sceneId,
+                        case_id: caseInfoExpect.case_id,
+                        expect: caseInfoExpect.expect,
+                        api_config: caseInfoExpect.api_config,
+                        create_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm'),
+                        modify_time: sd.format(new Date(), 'YYYY-MM-DD HH:mm'),
+                        create_person: "admin",
+                        modify_person: "admin",
+                        case_name: caseInfoExpect.case_name,
+                        step_no: caseIdx,
+                        extract: caseInfoExpect.extract_spec
+                    }
+                    dd.push(relationData)
+                }
 
-    async findSceneRelation() {}
+                // 调用pgService的多条数据插入方法
+                result.data = await this.pgService.at_scene_case_relation.createMany({
+                    data: dd
+                })
+                return result
+        } catch(err) {
+            this.caseReferLogger.error(`create scene case relation failed`,err.stack)
+            result.error = err
+        }
+        
+        return result    
+    }
+
+    // 根据sceneid和caseid更新关联关系
+    async updateSceneRelation(condition:Prisma.at_scene_case_relationWhereUniqueInput, updateRelation:Prisma.at_scene_case_relationCreateInput) {
+        let result:SceneServiceVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_scene_case_relation.update({
+                where: condition,
+                data: updateRelation
+            })
+        } catch(err) {
+            this.caseReferLogger.error(`update scene relation failed with data ${JSON.stringify(updateRelation)}`,err.stack)
+            result.error = err
+        }
+        return result
+    }
+
+    // 根据sceneId删除relation
+    async deleteSceneRelation(condition:Prisma.at_scene_case_relationWhereInput) {
+        let result:SceneServiceVO = {
+            data: null,
+            error: null
+        }
+        
+        try {
+            await this.pgService.at_scene_case_relation.deleteMany({
+                where: {
+                    scene_id: condition.scene_id
+                }
+            })
+        } catch(err) {
+            this.caseReferLogger.error(`delete scene relation with ${JSON.stringify(condition)} failed`,err.stack)
+            result.error = err
+        }
+        return result
+    }
+
+    // 根据sceneId查找scene relation
+    async findSceneRelation(condition:Prisma.at_scene_case_relationWhereInput) {
+        let result:SceneServiceVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_scene_case_relation.findFirst({
+                where: condition
+            })
+        } catch(err) {
+            this.caseReferLogger.error(`find scene relation with ${JSON.stringify(condition)}}] failed `,err.stack)
+            result.error = err
+        }
+        return result
+    }
     
 
 }

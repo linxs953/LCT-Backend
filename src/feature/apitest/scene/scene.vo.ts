@@ -45,3 +45,18 @@ export class DeleteSceneInfoVO extends CommonFields {
 }
 
 
+export class FindSceneRelationVO extends CommonFields {
+    data: Prisma.at_scene_case_relationCreateInput
+}
+
+export class DeleteSceneRelationVO extends CommonFields {}
+
+
+export class CreateSceneRelationVO extends CommonFields {
+    data: Prisma.at_scene_case_relationCreateInput
+}
+
+
+
+
+

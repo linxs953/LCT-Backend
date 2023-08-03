@@ -1,5 +1,5 @@
 import { Param } from "@nestjs/common";
-import { IsNotEmpty, IsNumber, IsString } from "class-validator";
+import { IsArray, IsNotEmpty, IsNumber, IsString } from "class-validator";
 
 
 export class FindSceneInfoParamDto {
@@ -53,3 +53,26 @@ export class UpdateSceneDto {
     isEnable?: number
 
 }
+
+
+ export class CreateRelationDto {
+
+    @IsNotEmpty()
+    @IsString()
+    sceneId: string
+
+    @IsNotEmpty()
+    @IsArray()
+    caseIdList: Array<string>
+ }
+
+
+ export class FindRelationParamDto {
+
+    @IsNotEmpty()
+    @IsString()
+    sceneId:string    
+ }
+
+ export class DeleteRelationParamDto extends FindRelationParamDto {}
+
