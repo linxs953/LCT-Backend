@@ -56,6 +56,10 @@ export class CreateSceneRelationVO extends CommonFields {
     data: Prisma.at_scene_case_relationCreateInput
 }
 
+export class UpdateSceneRelationVO extends CommonFields {
+    data: Prisma.at_scene_case_relationCreateInput
+}
+
 
 
 

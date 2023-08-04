@@ -20,7 +20,7 @@ import { DtoVerifyMiddleware } from 'src/middleware/dto_verify.middleware';
 export class TaskModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(LoggerMiddleware).forRoutes(TaskController)
-    consumer.apply(DtoVerifyMiddleware).forRoutes(TaskController)
+    // consumer.apply(DtoVerifyMiddleware).forRoutes(TaskController)
 
   }
   

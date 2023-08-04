@@ -74,5 +74,38 @@ export class UpdateSceneDto {
     sceneId:string    
  }
 
+
+ export class UpdateRelationDto {
+    
+    @IsNotEmpty()
+    @IsString()
+    sceneId:string
+
+    @IsNotEmpty()
+    @IsString()
+    caseId:string
+
+    @IsString()
+    @IsNotEmpty()
+    expect?: string
+
+    @IsString()
+    @IsNotEmpty()
+    api_config?: string
+
+    @IsString()
+    @IsNotEmpty()
+    case_name?: string
+
+    @IsNumber()
+    @IsNotEmpty()
+    step_no?: number
+
+    @IsString()
+    @IsNotEmpty()
+    extract?: string
+    
+ }
+
  export class DeleteRelationParamDto extends FindRelationParamDto {}
 

@@ -1,7 +1,7 @@
 import { Body, Injectable, Logger, Post } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PostgresService } from "src/common/prisma/prisma.service";
-import {CaseVO, StepServiceVO} from "./step.vo"
+import {CaseVO, StepServiceListVO, StepServiceVO} from "./step.vo"
 import { CreateStepDto, DeleteCaseInfoDto, updateCaseInfoDto } from "./step.dto";
 const random = require('string-random')
 
@@ -50,6 +50,27 @@ export class StepService {
             result.error = err
         }
        return result
+    }
+
+    async findCaseAll() {
+        let result:StepServiceListVO = {
+            error: null,
+            data: []
+        }
+        try {
+            result.data = await this.pgService.at_case_info.findMany({
+                where: {
+                    case_id: {not: ""},
+                    case_name: {not: ""},
+                    api_url: {not: ""},
+                    api_method: {not: ""}
+                }
+            })
+        } catch(err) {
+            this.stepServiceLogger.error(`fetch case info list occur error ${err.message}}`,err.stack)
+            result.error = err
+        }
+        return result
     }
 
     async createCase(createCaseDto:CreateStepDto) {
@@ -137,6 +158,90 @@ export class StepService {
             })
         } catch(err) {
             this.stepServiceLogger.error(`delete case failed with condition [${JSON.stringify(deleteDto.condition)}]`,err)
+            result.error = err
+        }
+        return result
+    }
+
+
+    async createCaseV2(caseInfo: Prisma.at_case_infoCreateInput) {
+        let result: StepServiceVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_case_info.create({
+                data: caseInfo
+            })
+        } catch(err) {
+            this.stepServiceLogger.error(`create case occur error ${err.message}`,err.stack)
+            result.error = err
+        }
+        return result
+    }
+
+
+
+    async updateCaseV2(condition:Prisma.at_case_infoWhereUniqueInput, data: Prisma.at_case_infoUpdateInput) {
+        let result:StepServiceVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_case_info.update({
+                where: condition,
+                data:data
+            })
+        } catch(err) {
+            result.error = err
+        }
+        return result
+    }
+
+
+    async deleteCaseV2(condition:Prisma.at_case_infoWhereInput) {
+        let result:StepServiceVO = {
+            data: null,
+            error: null
+        }
+        try {
+            await this.pgService.at_case_info.deleteMany({
+                where: condition
+            })
+        } catch(err) {
+            this.stepServiceLogger.error(`delete case occur error ${err.message}`, err.stack)
+            result.error = err
+        }
+        return result
+    }
+
+    async findCaseById(condition: Prisma.at_case_infoWhereUniqueInput) {
+        let result: StepServiceVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_case_info.findFirst({
+                where: condition
+            })
+        } catch(err) {
+            this.stepServiceLogger.error(`fetch caseInfo by [condition=${JSON.stringify(condition)}] failed`, err.stack)
+            result.error = err
+        }
+        return result
+    }
+
+    async findCaseByModuleId(condition: Prisma.at_case_infoWhereInput) {
+        let result: StepServiceListVO = {
+            data: null,
+            error: null
+        }
+        try {
+            result.data = await this.pgService.at_case_info.findMany({
+                where: condition
+            })
+        } catch(err) {
+            this.stepServiceLogger.error(`fetch mult case by [condition=${JSON.stringify(condition)}] failed`,err.stack)
             result.error = err
         }
         return result

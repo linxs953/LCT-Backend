@@ -114,13 +114,13 @@ export class CaseReferService {
     }
 
     // 根据sceneid和caseid更新关联关系
-    async updateSceneRelation(condition:Prisma.at_scene_case_relationWhereUniqueInput, updateRelation:Prisma.at_scene_case_relationCreateInput) {
+    async updateSceneRelation(condition:Prisma.at_scene_case_relationWhereInput, updateRelation:Prisma.at_scene_case_relationUpdateInput) {
         let result:SceneServiceVO = {
             data: null,
             error: null
         }
         try {
-            result.data = await this.pgService.at_scene_case_relation.update({
+            result.data = await this.pgService.at_scene_case_relation.updateMany({
                 where: condition,
                 data: updateRelation
             })

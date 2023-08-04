@@ -4,8 +4,8 @@ import { Prisma } from "@prisma/client";
 import { APITEST_CONFIG } from "../apitest.config";
 import { SceneService} from "./scene.service";
 import {Logger} from "@nestjs/common"
-import { CreateRelationDto, CreateSceneInfoDto, DeleteRelationParamDto, DeleteSceneInfoParamDto, FindRelationParamDto, FindSceneInfoParamDto, UpdateSceneDto } from "./scene.dto";
-import { CreateSceneInfoVO, CreateSceneRelationVO, DeleteSceneInfoVO, DeleteSceneRelationVO, FindSceneInfoListVO, FindSceneInfoVO, FindSceneRelationVO, SceneServiceDataListVO, UpdateSceneInfoVO } from "./scene.vo";
+import { CreateRelationDto, CreateSceneInfoDto, DeleteRelationParamDto, DeleteSceneInfoParamDto, FindRelationParamDto, FindSceneInfoParamDto, UpdateRelationDto, UpdateSceneDto } from "./scene.dto";
+import { CreateSceneInfoVO, CreateSceneRelationVO, DeleteSceneInfoVO, DeleteSceneRelationVO, FindSceneInfoListVO, FindSceneInfoVO, FindSceneRelationVO, SceneServiceDataListVO, UpdateSceneInfoVO, UpdateSceneRelationVO } from "./scene.vo";
 import { CaseReferService } from "./scene-case-relation.service";
 var sd = require('silly-datetime');
 
@@ -227,7 +227,40 @@ export class SceneController {
     }
 
     @Post("updateRelation")
-    async updateRelationWithSceneId() {}
+    async updateRelationWithSceneId(@Body() updateRelation:UpdateRelationDto, @Res() _res) {
+        let updateVO:UpdateSceneRelationVO = {
+            status: 0,
+            isSuccess: false,
+            message: "",
+            data: null
+        }
+        const updateRs = await this.sceneRelationService.updateSceneRelation({
+            scene_id: updateRelation.sceneId
+        },{
+            case_id: updateRelation.caseId,
+            expect: updateRelation.expect,
+            api_config: updateRelation.api_config,
+            modify_time: sd.format(new Date(),"YYYY-MM-DD HH:mm"),
+            modify_person: "admin",
+            case_name: updateRelation.case_name,
+            step_no: updateRelation.step_no,
+            extract: updateRelation.extract
+        })
+        if (updateRs.error) {
+            updateVO['status'] = HttpStatus.INTERNAL_SERVER_ERROR
+            updateVO['isSuccess'] = false
+            updateVO['message'] = updateRs.error.message
+            updateVO['data'] = null
+            _res.status(HttpStatus.INTERNAL_SERVER_ERROR).send(updateVO)
+            return    
+        }
+        updateVO['status'] = HttpStatus.OK
+        updateVO['isSuccess'] = true
+        updateVO['message'] = "update scene relation successfully"
+        updateVO['data'] = <Prisma.at_scene_case_relationCreateInput>updateRs.data
+        _res.status(HttpStatus.OK).send(updateVO)
+        return
+    }
 
 
     @Delete("removeRelation")

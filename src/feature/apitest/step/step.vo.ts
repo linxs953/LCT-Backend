@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client"
+import { BaseControllerVO } from "src/config/baseControllerVO"
 
 export interface CaseVO {
     case_no: number,
@@ -22,4 +23,35 @@ export interface CaseVO {
 export interface StepServiceVO {
     error: Error
     data: Prisma.at_case_infoCreateInput | CaseVO | {}
+}
+
+export interface StepServiceListVO {
+    error: Error
+    data: Array<Prisma.at_case_infoCreateInput | CaseVO | {}>
+}
+
+
+/*
+    case service controller
+*/
+
+
+export interface CreateCaseVO extends BaseControllerVO {
+    data: Prisma.at_case_infoCreateInput
+}
+
+export interface UpdateCaseVO extends BaseControllerVO {
+    data: Prisma.at_case_infoCreateInput
+}
+
+export interface DeleteCaseVO extends BaseControllerVO {
+    
+}
+
+export interface FindCaseVO extends BaseControllerVO {
+    data: Prisma.at_case_infoCreateInput
+}
+
+export interface FindCaseListVO extends BaseControllerVO {
+    data: Array<Prisma.at_case_infoCreateInput>
 }
