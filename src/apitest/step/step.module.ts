@@ -1,8 +1,8 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { PostgresService } from 'src/common/prisma/prisma.service';
+import { PostgresService } from 'common/prisma/prisma.service';
 import { StepController } from './step.controller';
 import { StepService } from './step.service';
-import { LoggerMiddleware } from 'src/middleware/logger.middleware';
+import { LoggerMiddleware } from 'middleware/logger.middleware';
 
 @Module({
     controllers: [StepController],

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { PostgresService } from "src/common/prisma/prisma.service";
+import { PostgresService } from "common/prisma/prisma.service";
 import { TaskRunRecordCreateDto, TaskRunRecordUpdateDto } from "./task.dto";
 import { TaskServiceDataListVO, TaskServiceVO } from "./task.vo";
 var sd = require('silly-datetime');

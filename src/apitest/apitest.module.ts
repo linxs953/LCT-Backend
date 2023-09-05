@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { PostgresModule } from 'src/common/prisma/prisma.module';
-import { PostgresService } from 'src/common/prisma/prisma.service';
+import { PostgresModule } from 'common/prisma/prisma.module';
+import { PostgresService } from 'common/prisma/prisma.service';
 import { ExecutorModule } from './executor/executor.module';
 import { ExecutorService } from './executor/executor.service';
 import { FeatMKController } from './featMK/featMK.controller';

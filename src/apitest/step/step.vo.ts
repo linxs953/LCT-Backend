@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client"
-import { BaseControllerVO } from "src/config/baseControllerVO"
+import { BaseControllerVO } from "config/baseControllerVO"
 
 export interface CaseVO {
     case_no: number,

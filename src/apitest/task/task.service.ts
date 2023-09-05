@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { PostgresService } from "src/common/prisma/prisma.service";
+import { PostgresService } from "common/prisma/prisma.service";
 import { CollectionRunDto } from "../executor/executor.dto";
 import { ExecutorService } from "../executor/executor.service";
 import { FeatMKService } from "../featMK/featMK.service";

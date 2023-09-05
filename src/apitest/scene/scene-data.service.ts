@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { PostgresService } from "src/common/prisma/prisma.service";
+import { PostgresService } from "common/prisma/prisma.service";
 import { SceneServiceDataListVO, SceneServiceVO } from "./scene.vo";
 import { Prisma } from "@prisma/client";
 

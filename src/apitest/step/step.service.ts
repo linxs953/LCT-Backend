@@ -1,6 +1,6 @@
 import { Body, Injectable, Logger, Post } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { PostgresService } from "src/common/prisma/prisma.service";
+import { PostgresService } from "common/prisma/prisma.service";
 import {CaseVO, StepServiceListVO, StepServiceVO} from "./step.vo"
 import { CreateStepDto, DeleteCaseInfoDto, updateCaseInfoDto } from "./step.dto";
 const random = require('string-random')

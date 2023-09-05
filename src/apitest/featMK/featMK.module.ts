@@ -1,12 +1,12 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { PostgresModule } from 'src/common/prisma/prisma.module';
-import { PostgresService } from 'src/common/prisma/prisma.service';
+import { PostgresModule } from 'common/prisma/prisma.module';
+import { PostgresService } from 'common/prisma/prisma.service';
 import { SceneModule } from '../scene/scene.module';
 import { SceneService } from '../scene/scene.service';
 import { FeatMKController } from './featMK.controller';
 import { FeatMKService } from './featMK.service';
-import { LoggerMiddleware } from 'src/middleware/logger.middleware';
-import { DtoVerifyMiddleware } from 'src/middleware/dto_verify.middleware';
+import { LoggerMiddleware } from 'middleware/logger.middleware';
+import { DtoVerifyMiddleware } from 'middleware/dto_verify.middleware';
 
 
 @Module({

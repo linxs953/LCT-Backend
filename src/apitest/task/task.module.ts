@@ -1,5 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
-import { PostgresService } from 'src/common/prisma/prisma.service';
+import { PostgresService } from 'common/prisma/prisma.service';
 import { ExecutorModule } from '../executor/executor.module';
 import { ExecutorService } from '../executor/executor.service';
 import { FeatMKModule } from '../featMK/featMK.module';
@@ -8,8 +8,8 @@ import { SceneService } from '../scene/scene.service';
 import { TaskController } from './task.controller';
 import { TaskRunResultService } from './task.report.service';
 import { TaskService } from './task.service';
-import { LoggerMiddleware } from 'src/middleware/logger.middleware';
-import { DtoVerifyMiddleware } from 'src/middleware/dto_verify.middleware';
+import { LoggerMiddleware } from 'middleware/logger.middleware';
+import { DtoVerifyMiddleware } from 'middleware/dto_verify.middleware';
 
 @Module({
     imports: [FeatMKModule,ExecutorModule,SceneModule],
