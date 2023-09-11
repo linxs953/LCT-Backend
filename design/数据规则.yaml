@@ -1,0 +1,33 @@
+---
+# 接口参数规则文件
+apiName: /start
+rules:
+  - part: body
+    ruleDetail:
+    - name: username
+      dataType: string
+      minLength: 5
+      maxLength: 10
+      isGenSingleTypeStr: true
+      allValueType: number,upperStr,lowerStr,specChar,hanzi
+      containValueType: number,upperStr,lowerStr,specChar
+    - name: userConfig
+      dataType: map
+      data:
+      - key: userType
+        valueType: 1,2,3,4
+        dataType: number
+      - key: timestamp
+        dataType: string | Date
+        length: 13
+    - name: dataList
+      dataType: array
+      data:
+        element: []
+  - part: url
+    ruleDetail:
+    - name: taskId
+      dataType: string
+      maxLength: 32
+      isGenSingleTypeStr: true
+      allValueType: number,upperStr,lowerStr,specChar,null
